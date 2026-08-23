@@ -30,6 +30,9 @@ export default function LeadsPage() {
   const [sourceFilter, setSourceFilter] = useState("all");
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
 
+
+
+  
   const filteredLeads = leads.filter((lead) => {
     const matchesSearch = lead.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.email.toLowerCase().includes(searchTerm.toLowerCase());
