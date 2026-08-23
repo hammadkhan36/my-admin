@@ -248,3 +248,65 @@
   transform: translateY(-2px);
   box-shadow: 0 12px 32px -8px color-mix(in oklch, var(--primary) 20%, transparent);
 }
+
+
+
+
+/* ===== Enhanced Professional UI ===== */
+
+/* Sidebar Active Item - Gradient + Glow */
+[data-slot="sidebar-menu-button"][data-active] {
+  background: linear-gradient(135deg, var(--sidebar-primary) 0%, color-mix(in oklch, var(--sidebar-primary) 80%, black) 100%) !important;
+  color: white !important;
+  box-shadow: 0 8px 24px -4px color-mix(in oklch, var(--sidebar-primary) 70%, transparent);
+  border: 1px solid color-mix(in oklch, var(--sidebar-primary) 90%, transparent);
+}
+
+/* Sidebar Hover - Soft background */
+[data-slot="sidebar-menu-button"]:hover {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+  transform: translateX(3px);
+  box-shadow: 0 4px 12px -2px rgba(0,0,0,0.1);
+}
+
+/* Main Content Background - subtle gradient */
+[data-slot="sidebar-inset"] {
+  background: linear-gradient(135deg, color-mix(in oklch, var(--primary) 3%, var(--background)) 0%, var(--background) 50%, color-mix(in oklch, var(--accent) 5%, var(--background)) 100%);
+}
+
+/* Cards - improved border and shadow */
+[data-slot="card"] {
+  border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 12px -2px rgba(0,0,0,0.05);
+  transition: all 0.25s ease;
+}
+
+[data-slot="card"]:hover {
+  box-shadow: 0 12px 32px -8px color-mix(in oklch, var(--primary) 25%, transparent);
+  border-color: color-mix(in oklch, var(--primary) 30%, var(--border));
+  transform: translateY(-3px);
+}
+
+/* Table header & rows */
+[data-slot="table"] th {
+  font-weight: 600;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+[data-slot="table"] tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+[data-slot="table"] tbody tr:hover {
+  background: color-mix(in oklch, var(--primary) 5%, transparent);
+}
+
+/* Chart container */
+[data-slot="card"] .recharts-cartesian-grid line {
+  stroke: var(--border);
+  stroke-dasharray: 3 3;
+}
