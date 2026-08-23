@@ -1,7 +1,9 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import Image from "next/image"
+import { usePathname } from "next/navigation"  // <-- Dynamic active state ke liye
 import { siteConfig } from "@/lib/site-config"
 import {
   Sidebar,
@@ -61,7 +63,6 @@ const menuGroups = [
       { title: "Leads", url: "/crm/leads", icon: UsersIcon },
       { title: "Customers", url: "/crm/customers", icon: UserIcon },
       { title: "Notifications", url: "/crm/notifications", icon: BellIcon },
-
     ],
   },
   {
@@ -126,6 +127,8 @@ const menuGroups = [
 ]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const pathname = usePathname()  // <-- Current pathname
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       {/* Header with logo */}
@@ -134,7 +137,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               className="data-[slot=sidebar-menu-button]:p-1.5!"
-              render={<a href="/dashboard" />}
+              render={<Link href="/dashboard" />}
             >
               {siteConfig.logo ? (
                 <Image
@@ -160,17 +163,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {group.items.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      render={<a href={item.url} />}
-                      isActive={item.url === "/dashboard"} // yahan active state manage karo
-                    >
-                      <item.icon className="size-4" />
-                      <span>{item.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {group.items.map((item) => {
+                  const isActive = pathname === item.url || pathname.startsWith(item.url + "/")
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        render={<Link href={item.url} />}
+                        isActive={isActive}  // <-- Dynamic active state
+                      >
+                        <item.icon className="size-4" />
+                        <span>{item.title}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
