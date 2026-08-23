@@ -199,3 +199,52 @@
     @apply font-sans;
   }
 }
+
+
+
+
+/* ===== Premium Sidebar & UI Enhancements ===== */
+
+/* Sidebar Gradient */
+[data-slot="sidebar"] {
+  background: linear-gradient(180deg, var(--sidebar) 0%, color-mix(in oklch, var(--sidebar-accent) 40%, transparent) 100%);
+  border-right: 1px solid var(--sidebar-border);
+}
+
+/* Sidebar Menu Buttons */
+[data-slot="sidebar-menu-button"] {
+  border-radius: 0.75rem;
+  margin-inline: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+[data-slot="sidebar-menu-button"]:hover {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+  transform: translateX(2px);
+}
+
+[data-slot="sidebar-menu-button"][data-active] {
+  background: var(--sidebar-primary);
+  color: var(--sidebar-primary-foreground);
+  box-shadow: 0 8px 20px -6px color-mix(in oklch, var(--sidebar-primary) 60%, transparent);
+}
+
+/* Sidebar Group Labels */
+[data-slot="sidebar-group-label"] {
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: var(--muted-foreground);
+}
+
+/* Cards Hover */
+[data-slot="card"] {
+  transition: all 0.2s ease;
+}
+
+[data-slot="card"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px -8px color-mix(in oklch, var(--primary) 20%, transparent);
+}
