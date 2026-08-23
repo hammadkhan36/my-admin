@@ -34,7 +34,8 @@ export function SiteHeader() {
           orientation="vertical"
           className="mx-2 h-4 data-vertical:self-auto"
         />
-        <h1 className="text-base font-semibold tracking-tight">
+        <h1 className="text-base font-semibold tracking-tight flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full  bg-emerald-500 animate-pulse"></span>
           Dashboard
         </h1>
         <div className="ml-auto flex items-center gap-2">
