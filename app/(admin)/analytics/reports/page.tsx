@@ -19,7 +19,7 @@ export default function ReportsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold">Reports</h1>
         <div className="flex items-center gap-2">
-          <Select value={dateFilter} onValueChange={setDateFilter}>
+          <Select value={dateFilter} onValueChange={(value) => setDateFilter(value ?? "all")}>
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Filter" />
             </SelectTrigger>
