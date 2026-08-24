@@ -9,6 +9,7 @@ type AdminConfigContextType = {
   config: MasterConfig;
   updateSubscription: (newSub: Partial<SubscriptionInfo>) => void;
   updateLockFeature: (key: string, locked: boolean, unlockCode?: string) => void;
+  updateRenewalCode: (code: string) => void; // <-- add
   getLockedFeature: (key: string) => FeatureLock | undefined;
   isUnlocked: (key: string) => boolean;
 };
@@ -19,7 +20,6 @@ export function AdminConfigProvider({ children }: { children: React.ReactNode })
   const [config, setConfig] = React.useState<MasterConfig>(masterConfig);
   const [loaded, setLoaded] = React.useState(false);
 
-  // Load saved overrides from localStorage after mount
   React.useEffect(() => {
     const saved = localStorage.getItem(ADMIN_CONFIG_STORAGE_KEY);
     if (saved) {
@@ -31,15 +31,15 @@ export function AdminConfigProvider({ children }: { children: React.ReactNode })
           superAdmin: { ...prev.superAdmin, ...(parsed.superAdmin || {}) },
           subscription: { ...prev.subscription, ...(parsed.subscription || {}) },
           lockedFeatures: parsed.lockedFeatures || prev.lockedFeatures,
+          renewalCode: parsed.renewalCode || prev.renewalCode, // <-- add
         }));
       } catch (e) {
         console.error("Failed to parse admin config overrides", e);
       }
     }
-    setLoaded(true); // mark as loaded
+    setLoaded(true);
   }, []);
 
-  // Save to localStorage only after initial load has completed
   React.useEffect(() => {
     if (loaded) {
       localStorage.setItem(ADMIN_CONFIG_STORAGE_KEY, JSON.stringify(config));
@@ -62,6 +62,10 @@ export function AdminConfigProvider({ children }: { children: React.ReactNode })
     }));
   };
 
+  const updateRenewalCode = (code: string) => { // <-- add
+    setConfig((prev) => ({ ...prev, renewalCode: code }));
+  };
+
   const getLockedFeature = (key: string) => {
     return config.lockedFeatures.find((lf) => lf.key === key);
   };
@@ -74,7 +78,14 @@ export function AdminConfigProvider({ children }: { children: React.ReactNode })
   };
 
   return (
-    <AdminConfigContext.Provider value={{ config, updateSubscription, updateLockFeature, getLockedFeature, isUnlocked }}>
+    <AdminConfigContext.Provider value={{
+      config,
+      updateSubscription,
+      updateLockFeature,
+      updateRenewalCode, // <-- add
+      getLockedFeature,
+      isUnlocked,
+    }}>
       {children}
     </AdminConfigContext.Provider>
   );

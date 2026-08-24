@@ -61,6 +61,7 @@ export type MasterConfig = {
     };
     lockedFeatures: FeatureLock[];
     subscription: SubscriptionInfo;
+     renewalCode: string; 
 };
 
 export const masterConfig: MasterConfig = {
@@ -82,6 +83,7 @@ export const masterConfig: MasterConfig = {
         gracePeriodDays: 7,
         isActive: true,
     },
+    renewalCode: "RENEW2024", // default renewal code
 };
 
 // Keys for localStorage
