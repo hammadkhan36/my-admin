@@ -97,6 +97,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { siteConfig } from "@/lib/site-config";
 import { FeaturesProvider } from "@/components/features-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { SubscriptionProvider } from "@/components/subscription-provider";
+import { AdminConfigProvider } from "@/components/admin-config-provider";
 
 import "./globals.css";
 
@@ -126,12 +128,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col" suppressHydrationWarning >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <TooltipProvider>
+            <AdminConfigProvider>
             <FeaturesProvider>
+              <SubscriptionProvider>
               {children}
+               <Toaster position="top-right" />
+              </SubscriptionProvider>
             </FeaturesProvider>
+            </AdminConfigProvider>
           </TooltipProvider>
         </ThemeProvider>
-        <Toaster position="top-right" />
       </body>
     </html>
   );

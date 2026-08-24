@@ -1,3 +1,7 @@
+
+import { masterConfig } from "@/lib/master-config";
+
+
 export type FeatureKey =
   | "dashboard"
   | "leads"
@@ -63,6 +67,17 @@ export const defaultFeatures: Features = {
   settings: true,
   notifications: true,
 };
+
+// Locked features check
+export function isFeatureLocked(key: FeatureKey): boolean {
+  const lock = masterConfig.lockedFeatures.find((l) => l.key === key);
+  return lock?.locked ?? false;
+}
+
+export function getUnlockCode(key: FeatureKey): string | undefined {
+  const lock = masterConfig.lockedFeatures.find((l) => l.key === key);
+  return lock?.unlockCode;
+}
 
 // Settings page grouping
 export const featureGroups: { label: string; items: { key: FeatureKey; label: string }[] }[] = [
