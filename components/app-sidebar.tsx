@@ -251,6 +251,10 @@ import {
   HistoryIcon,
   SettingsIcon,
   CommandIcon,
+  CalendarDays,
+  CalendarCheck,
+  Scissors,
+  Clock,
 } from "lucide-react"
 
 // Menu structure with exact flag for items that should not highlight on subroutes
@@ -267,6 +271,15 @@ const menuGroups = [
       { title: "Leads", url: "/crm/leads", icon: UsersIcon },
       { title: "Customers", url: "/crm/customers", icon: UserIcon },
       { title: "Notifications", url: "/crm/notifications", icon: BellIcon },
+    ],
+  },
+  {
+    label: "APPOINTMENTS",
+    items: [
+      { title: "Appointments", url: "/appointments", icon: CalendarDays,  exact: true },
+      { title: "Calendar", url: "/appointments/calendar", icon: CalendarCheck },
+      { title: "Services", url: "/appointments/services", icon: Scissors },
+      { title: "Availability", url: "/appointments/availability", icon: Clock },
     ],
   },
   {
