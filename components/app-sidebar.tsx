@@ -245,7 +245,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { siteConfig } from "@/lib/site-config"
-import { useFeatures } from "@/components/features-provider"
+import { useSupabaseConfig } from "@/components/supabase-config-provider";
+import { useFeatures } from "@/components/features-provider";
 import { FeatureKey } from "@/lib/features-config"
 import {
   Sidebar,
@@ -293,6 +294,7 @@ import {
   CalendarCheck,
   Scissors,
 } from "lucide-react"
+
 
 type MenuItem = {
   title: string;
@@ -389,7 +391,8 @@ const menuGroups: { label: string; items: MenuItem[] }[] = [
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
-  const { features } = useFeatures();
+  const { businessSettings } = useSupabaseConfig();
+const { features } = useFeatures();
 
   // Filter groups based on enabled features
   const visibleGroups = menuGroups
@@ -458,12 +461,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {/* Footer with user */}
       <SidebarFooter>
         <NavUser
-          user={{
-            name: siteConfig.user,
-            email: siteConfig.userEmail,
-            avatar: siteConfig.userAvatar,
-            Role: siteConfig.userRole,
-          }}
+          // user={{
+          //   name: siteConfig.user,
+          //   email: siteConfig.userEmail,
+          //   avatar: siteConfig.userAvatar,
+          //   Role: siteConfig.userRole,
+          // }}
         />
       </SidebarFooter>
     </Sidebar>

@@ -11,13 +11,13 @@ export function RenewSubscriptionForm() {
   const { renewWithCode } = useSubscription();
   const [code, setCode] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!code.trim()) {
       toast.error("Please enter renewal code");
       return;
     }
-    const success = renewWithCode(code.trim());
+    const success = await renewWithCode(code.trim());
     if (success) {
       toast.success("Subscription renewed successfully!");
       setCode("");
