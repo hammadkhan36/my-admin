@@ -132,3 +132,9 @@ insert into public.feature_settings (feature_key, enabled, locked, unlock_code) 
 
 
   
+
+  insert into public.profiles (id, email, full_name, role)
+values
+  ('cdff57de-37a6-432f-ab9d-94a8b23fd27f', 'txtifytools@gmail.com', 'Leto Admin', 'admin');
+
+  ya maan na admin bi add kar lia 
