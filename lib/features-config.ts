@@ -31,6 +31,9 @@ export type FeatureKey =
   | "roles"
   | "activityLogs"
   | "settings"
+  | "forms"
+  | "followUps"
+  | "leadSources"
   | "notifications";
 
 export type Features = Record<FeatureKey, boolean>;
@@ -66,6 +69,9 @@ export const defaultFeatures: Features = {
   activityLogs: true,
   settings: true,
   notifications: true,
+  forms: true,
+  followUps: true,
+  leadSources: true,
 };
 
 // Locked features check

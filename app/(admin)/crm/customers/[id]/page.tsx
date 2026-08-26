@@ -49,14 +49,12 @@ export default function CustomerDetailPage() {
       setLoading(true);
       const { data, error } = await supabase
         .from("customers")
-        .select(
-          `*,
+        .select(`
+          *,
           activities:activities(*),
           leads:leads(*),
-          appointments:appointments(service:appointment_services(name), date, time, status),
-          reviews:reviews(*),
-          coupons:coupons(*)`
-        )
+          appointments:appointments(*)
+        `)
         .eq("id", id)
         .single();
       if (error) {

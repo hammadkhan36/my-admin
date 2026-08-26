@@ -284,7 +284,7 @@ export default function AnalyticsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold">Analytics Dashboard</h1>
         <div className="flex gap-2">
-          <Select value={dateRange} onValueChange={setDateRange}>
+          <Select value={dateRange} onValueChange={(value) => setDateRange(value ?? "all")}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Date Range" />
             </SelectTrigger>

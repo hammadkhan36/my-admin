@@ -293,6 +293,7 @@ import {
   CalendarDays,
   CalendarCheck,
   Scissors,
+  CalendarClock,
 } from "lucide-react"
 
 
@@ -317,6 +318,11 @@ const menuGroups: { label: string; items: MenuItem[] }[] = [
       { title: "Leads", url: "/crm/leads", icon: UsersIcon, featureKey: "leads" },
       { title: "Customers", url: "/crm/customers", icon: UserIcon, featureKey: "customers" },
       { title: "Notifications", url: "/crm/notifications", icon: BellIcon, featureKey: "notifications" },
+
+      { title: "Forms", url: "/crm/forms", icon: FileTextIcon, featureKey: "forms" }, // new (optional)
+      { title: "Follow-ups", url: "/crm/follow-ups", icon: CalendarClock, featureKey: "followUps" }, // new 
+      { title: "Lead Sources", url: "/crm/lead-sources", icon: TrendingUpIcon, featureKey: "leadSources" }, // new analytics
+      { title: "Services", url: "/crm/services", icon: WrenchIcon, featureKey: "services" }, // new management
     ],
   },
   {
@@ -392,7 +398,7 @@ const menuGroups: { label: string; items: MenuItem[] }[] = [
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const { businessSettings } = useSupabaseConfig();
-const { features } = useFeatures();
+  const { features } = useFeatures();
 
   // Filter groups based on enabled features
   const visibleGroups = menuGroups
@@ -461,12 +467,12 @@ const { features } = useFeatures();
       {/* Footer with user */}
       <SidebarFooter>
         <NavUser
-          // user={{
-          //   name: siteConfig.user,
-          //   email: siteConfig.userEmail,
-          //   avatar: siteConfig.userAvatar,
-          //   Role: siteConfig.userRole,
-          // }}
+        // user={{
+        //   name: siteConfig.user,
+        //   email: siteConfig.userEmail,
+        //   avatar: siteConfig.userAvatar,
+        //   Role: siteConfig.userRole,
+        // }}
         />
       </SidebarFooter>
     </Sidebar>
