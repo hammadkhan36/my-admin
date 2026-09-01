@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { Fragment, useActionState, useEffect, useState } from "react";
+
 import { KeyRound, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -193,60 +194,65 @@ export function StaffManager({ members }: { members: TeamMember[] }) {
 
                     <TableBody>
                         {members.map((member) => (
-                            <TableRow key={member.id}>
-                                <TableCell className="font-medium">
-                                    {member.full_name || "Unnamed"}
-                                </TableCell>
-                                <TableCell>{member.email}</TableCell>
-                                <TableCell>
-                                    <Badge variant="outline" className="capitalize">
-                                        {member.role}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge variant={member.is_active ? "secondary" : "outline"}>
-                                        {member.is_active ? "Active" : "Inactive"}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    {!(["superadmin", "owner"] as AppRole[]).includes(member.role) && (
-                                        <div className="flex justify-end gap-2">
-                                            <Button
-                                                type="button"
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() =>
-                                                    setPasswordMemberId(
-                                                        passwordMemberId === member.id ? null : member.id
-                                                    )
-                                                }
-                                            >
-                                                <KeyRound className="mr-1 h-3.5 w-3.5" />
-                                                Password
-                                            </Button>
+                            <Fragment key={member.id}>
+                                <TableRow>
+                                    <TableCell className="font-medium">
+                                        {member.full_name || "Unnamed"}
+                                    </TableCell>
 
-                                            <form
-                                                action={setMemberActive.bind(
-                                                    null,
-                                                    member.id,
-                                                    !member.is_active
-                                                )}
-                                            >
-                                                <Button type="submit" size="sm" variant="outline">
-                                                    {member.is_active ? "Deactivate" : "Activate"}
+                                    <TableCell>{member.email}</TableCell>
+
+                                    <TableCell>
+                                        <Badge variant="outline" className="capitalize">
+                                            {member.role}
+                                        </Badge>
+                                    </TableCell>
+
+                                    <TableCell>
+                                        <Badge variant={member.is_active ? "secondary" : "outline"}>
+                                            {member.is_active ? "Active" : "Inactive"}
+                                        </Badge>
+                                    </TableCell>
+
+                                    <TableCell className="text-right">
+                                        {!(["superadmin", "owner"] as AppRole[]).includes(member.role) && (
+                                            <div className="flex justify-end gap-2">
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() =>
+                                                        setPasswordMemberId(
+                                                            passwordMemberId === member.id ? null : member.id
+                                                        )
+                                                    }
+                                                >
+                                                    <KeyRound className="mr-1 h-3.5 w-3.5" />
+                                                    Password
                                                 </Button>
-                                            </form>
 
-                                            <form action={deleteTeamMember.bind(null, member.id)}>
-                                                <Button type="submit" size="sm" variant="destructive">
-                                                    <Trash2 className="mr-1 h-3.5 w-3.5" />
-                                                    Delete
-                                                </Button>
-                                            </form>
-                                        </div>
-                                    )}
-                                </TableCell>
+                                                <form
+                                                    action={setMemberActive.bind(
+                                                        null,
+                                                        member.id,
+                                                        !member.is_active
+                                                    )}
+                                                >
+                                                    <Button type="submit" size="sm" variant="outline">
+                                                        {member.is_active ? "Deactivate" : "Activate"}
+                                                    </Button>
+                                                </form>
 
+                                                <form action={deleteTeamMember.bind(null, member.id)}>
+                                                    <Button type="submit" size="sm" variant="destructive">
+                                                        <Trash2 className="mr-1 h-3.5 w-3.5" />
+                                                        Delete
+                                                    </Button>
+                                                </form>
+                                            </div>
+                                        )}
+                                    </TableCell>
+                                </TableRow>
 
                                 {passwordMemberId === member.id && (
                                     <TableRow>
@@ -276,7 +282,7 @@ export function StaffManager({ members }: { members: TeamMember[] }) {
                                         </TableCell>
                                     </TableRow>
                                 )}
-                            </TableRow>
+                            </Fragment>
                         ))}
 
                         {members.length === 0 && (
