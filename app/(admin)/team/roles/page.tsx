@@ -133,7 +133,7 @@ import {
   type RolePermissionRow,
   type UserOverrideRow,
   type PermissionMember,
-} from "@/components/team/member-permissions-manager.tsx";
+} from "@/components/team/member-permissions-manager";
 
 export default async function RolesPage() {
   await requirePermission("roles.manage");
