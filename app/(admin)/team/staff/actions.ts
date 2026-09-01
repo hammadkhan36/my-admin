@@ -12,6 +12,11 @@
 // Owner aur superadmin ko dashboard se deactivate nahi kar sakte.
 
 
+// updateMemberPassword selected staff/admin ka password change karega.
+
+// deleteTeamMember member ko Supabase Auth se delete karega. superadmin aur owner delete nahi honge.
+
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -136,6 +141,92 @@ export async function setMemberActive(memberId: string, isActive: boolean) {
   await admin.from("audit_logs").insert({
     actor_id: actor.id,
     event_type: isActive ? "member.activated" : "member.deactivated",
+    target_type: "profile",
+    target_id: memberId,
+  });
+
+  revalidatePath("/team/staff");
+}
+
+
+
+const updatePasswordSchema = z.object({
+  memberId: z.string().uuid(),
+  password: z
+    .string()
+    .min(10, "Password must contain at least 10 characters")
+    .regex(/[A-Za-z]/, "Password must contain a letter")
+    .regex(/[0-9]/, "Password must contain a number"),
+});
+
+export async function updateMemberPassword(formData: FormData) {
+  const actor = await requirePermission("staff.update");
+
+  const result = updatePasswordSchema.safeParse({
+    memberId: formData.get("memberId"),
+    password: formData.get("password"),
+  });
+
+  if (!result.success) {
+    return;
+  }
+
+  if (result.data.memberId === actor.id) {
+    return;
+  }
+
+  const admin = createAdminClient();
+
+  const { data: target } = await admin
+    .from("profiles")
+    .select("role")
+    .eq("id", result.data.memberId)
+    .maybeSingle();
+
+  if (!target || target.role === "superadmin" || target.role === "owner") {
+    return;
+  }
+
+  await admin.auth.admin.updateUserById(result.data.memberId, {
+    password: result.data.password,
+  });
+
+  await admin.from("audit_logs").insert({
+    actor_id: actor.id,
+    event_type: "member.password_updated",
+    target_type: "profile",
+    target_id: result.data.memberId,
+  });
+
+  revalidatePath("/team/staff");
+}
+
+export async function deleteTeamMember(memberId: string) {
+  const actor = await requirePermission("staff.delete");
+
+  if (!z.string().uuid().safeParse(memberId).success || memberId === actor.id) {
+    return;
+  }
+
+  const admin = createAdminClient();
+
+  const { data: target } = await admin
+    .from("profiles")
+    .select("role")
+    .eq("id", memberId)
+    .maybeSingle();
+
+  if (!target || target.role === "superadmin" || target.role === "owner") {
+    return;
+  }
+
+  await admin.from("profiles").update({ is_active: false }).eq("id", memberId);
+
+  await admin.auth.admin.deleteUser(memberId);
+
+  await admin.from("audit_logs").insert({
+    actor_id: actor.id,
+    event_type: "member.deleted",
     target_type: "profile",
     target_id: memberId,
   });
