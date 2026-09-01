@@ -369,7 +369,10 @@ export default function LeadsPage() {
           />
         </div>
         <div className="flex flex-wrap gap-2">
-          <Select value={leadTypeFilter} onValueChange={setLeadTypeFilter}>
+          <Select
+            value={leadTypeFilter}
+            onValueChange={(value) => setLeadTypeFilter(value ?? "all")}
+          >
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Lead Type" />
             </SelectTrigger>
@@ -380,7 +383,10 @@ export default function LeadsPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={sourceFilter} onValueChange={setSourceFilter}>
+          <Select
+            value={sourceFilter}
+            onValueChange={(value) => setSourceFilter(value ?? "all")}
+          >
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Source" />
             </SelectTrigger>
@@ -391,7 +397,10 @@ export default function LeadsPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value ?? "all")}
+          >
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
