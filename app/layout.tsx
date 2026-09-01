@@ -94,9 +94,9 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SupabaseConfigProvider } from "@/components/supabase-config-provider";
-import { FeaturesProvider } from "@/components/features-provider";
-import { SubscriptionProvider } from "@/components/subscription-provider";
+// import { SupabaseConfigProvider } from "@/components/supabase-config-provider";
+// import { FeaturesProvider } from "@/components/features-provider";
+// import { SubscriptionProvider } from "@/components/subscription-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -120,14 +120,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <TooltipProvider>
-            <SupabaseConfigProvider>
+            {/* <SupabaseConfigProvider>
               <FeaturesProvider>
                 <SubscriptionProvider>
                   {children}
                   <Toaster position="top-right" />
                 </SubscriptionProvider>
               </FeaturesProvider>
-            </SupabaseConfigProvider>
+            </SupabaseConfigProvider> */}
+            
+            {children}
+            <Toaster position="top-right" />
           </TooltipProvider>
         </ThemeProvider>
       </body>

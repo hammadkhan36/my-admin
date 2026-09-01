@@ -155,12 +155,17 @@ export function LoginForm() {
       // Fetch profile role
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, is_active")
         .eq("id", data.user.id)
         .single();
 
       if (profileError) {
         toast.error("Profile not found. Contact support.");
+        return;
+      }
+      if (!profile?.is_active) {
+        toast.error("Your account is inactive. Contact the owner.");
+        await supabase.auth.signOut();
         return;
       }
 
