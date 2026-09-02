@@ -49,3 +49,24 @@ export async function deleteNotification(notificationId: string) {
 
   revalidatePath("/crm/notifications");
 }
+
+
+
+
+export async function markNotificationReadById(notificationId: string) {
+  const profile = await requireProfile();
+
+  if (!z.string().uuid().safeParse(notificationId).success) {
+    return;
+  }
+
+  const admin = createAdminClient();
+
+  await admin
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("id", notificationId)
+    .or(`recipient_id.eq.${profile.id},recipient_id.is.null`);
+
+  revalidatePath("/crm/notifications");
+}

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase-browser";
 import { useAuth } from "@/components/auth-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { markNotificationRead } from "@/app/(admin)/crm/notifications/actions";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -31,22 +32,48 @@ export function HeaderNotifications() {
     const { profile } = useAuth();
     const [notifications, setNotifications] = React.useState<HeaderNotification[]>([]);
 
-    React.useEffect(() => {
-        async function fetchNotifications() {
-            const { data } = await supabase
-                .from("notifications")
-                .select("id, title, message, target_url, read_at, created_at")
-                .or(`recipient_id.eq.${profile.id},recipient_id.is.null`)
-                .order("created_at", { ascending: false })
-                .limit(10);
+    const fetchNotifications = React.useCallback(async () => {
+        const { data } = await supabase
+            .from("notifications")
+            .select("id, title, message, target_url, read_at, created_at")
+            .or(`recipient_id.eq.${profile.id},recipient_id.is.null`)
+            .order("created_at", { ascending: false })
+            .limit(10);
 
-            setNotifications((data ?? []) as HeaderNotification[]);
-        }
-
-        fetchNotifications();
+        setNotifications((data ?? []) as HeaderNotification[]);
     }, [profile.id, supabase]);
 
+    React.useEffect(() => {
+        fetchNotifications();
+    }, [fetchNotifications]);
+
+
+    React.useEffect(() => {
+        const interval = window.setInterval(() => {
+            fetchNotifications();
+        }, 30000);
+
+        return () => window.clearInterval(interval);
+    }, [fetchNotifications]);
+
+
     const unreadCount = notifications.filter((item) => !item.read_at).length;
+
+
+
+    const openNotification = async (notification: HeaderNotification) => {
+        console.log("Notification clicked:", notification.id, notification.target_url);
+        if (!notification.read_at) {
+            await markNotificationRead(notification.id);
+            await fetchNotifications();
+            router.refresh();
+        }
+        router.push(notification.target_url || "/crm/notifications");
+    };
+
+    function cn(arg0: string, arg1: string | boolean): string | ((state: import("@base-ui/react").ContextMenuItemState) => string | undefined) | undefined {
+        return [arg0, arg1].filter(Boolean).join(" ");
+    }
 
     return (
         <DropdownMenu>
@@ -73,8 +100,11 @@ export function HeaderNotifications() {
                 {notifications.slice(0, 5).map((notification) => (
                     <DropdownMenuItem
                         key={notification.id}
-                        className="flex flex-col items-start gap-1"
-                        onClick={() => router.push(notification.target_url || "/crm/notifications")}
+                        onClick={() => openNotification(notification)}
+                        className={cn(
+                            "flex cursor-pointer flex-col items-start gap-1",
+                            !notification.read_at && "bg-muted/50" // ya koi aur highlight
+                        )}
                     >
                         <span className="font-medium">{notification.title}</span>
 
