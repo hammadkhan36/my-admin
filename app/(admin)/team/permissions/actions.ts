@@ -18,14 +18,16 @@ const overrideSchema = z.object({
 });
 
 export async function updateMemberRole(formData: FormData) {
-  await requirePermission("roles.manage_overrides");
+  const actor = await requirePermission("roles.manage_overrides");
 
   const result = updateRoleSchema.safeParse({
     memberId: formData.get("memberId"),
     role: formData.get("role"),
   });
 
-  if (!result.success) return;
+  if (!result.success) {
+    throw new Error("Invalid role data");
+  }
 
   const admin = createAdminClient();
 
@@ -36,13 +38,25 @@ export async function updateMemberRole(formData: FormData) {
     .maybeSingle();
 
   if (!target || target.role === "superadmin" || target.role === "owner") {
-    return;
+    throw new Error("This member cannot be changed");
   }
 
-  await admin
+  const { error } = await admin
     .from("profiles")
     .update({ role: result.data.role })
     .eq("id", result.data.memberId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await admin.from("audit_logs").insert({
+    actor_id: actor.id,
+    event_type: "member.role_updated",
+    target_type: "profile",
+    target_id: result.data.memberId,
+    details: { role: result.data.role },
+  });
 
   revalidatePath("/team/roles");
   revalidatePath("/team/staff");
@@ -57,7 +71,9 @@ export async function setPermissionOverride(formData: FormData) {
     allowed: formData.get("allowed") === "true",
   });
 
-  if (!result.success) return;
+  if (!result.success) {
+    throw new Error("Invalid permission data");
+  }
 
   const admin = createAdminClient();
 
@@ -68,10 +84,10 @@ export async function setPermissionOverride(formData: FormData) {
     .maybeSingle();
 
   if (!target || target.role === "superadmin" || target.role === "owner") {
-    return;
+    throw new Error("This member cannot be changed");
   }
 
-  await admin.from("user_permission_overrides").upsert(
+  const { error } = await admin.from("user_permission_overrides").upsert(
     {
       user_id: result.data.memberId,
       permission_key: result.data.permissionKey,
@@ -81,26 +97,53 @@ export async function setPermissionOverride(formData: FormData) {
     { onConflict: "user_id,permission_key" }
   );
 
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await admin.from("audit_logs").insert({
+    actor_id: actor.id,
+    event_type: "member.permission_override_updated",
+    target_type: "profile",
+    target_id: result.data.memberId,
+    details: {
+      permission_key: result.data.permissionKey,
+      allowed: result.data.allowed,
+    },
+  });
+
   revalidatePath("/team/roles");
 }
 
 export async function removePermissionOverride(formData: FormData) {
-  await requirePermission("roles.manage_overrides");
+  const actor = await requirePermission("roles.manage_overrides");
 
   const memberId = String(formData.get("memberId") || "");
   const permissionKey = String(formData.get("permissionKey") || "");
 
   if (!z.string().uuid().safeParse(memberId).success || !permissionKey) {
-    return;
+    throw new Error("Invalid permission data");
   }
 
   const admin = createAdminClient();
 
-  await admin
+  const { error } = await admin
     .from("user_permission_overrides")
     .delete()
     .eq("user_id", memberId)
     .eq("permission_key", permissionKey);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await admin.from("audit_logs").insert({
+    actor_id: actor.id,
+    event_type: "member.permission_override_removed",
+    target_type: "profile",
+    target_id: memberId,
+    details: { permission_key: permissionKey },
+  });
 
   revalidatePath("/team/roles");
 }
