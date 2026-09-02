@@ -97,10 +97,12 @@
 
 "use client";
 
+import * as React from "react";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useSupabaseConfig } from "@/components/supabase-config-provider";
+import { HeaderNotifications } from "@/components/header-notifications";
 
 export function SiteHeader() {
   const { businessSettings } = useSupabaseConfig();
@@ -119,6 +121,8 @@ export function SiteHeader() {
           <h1 className="text-base font-semibold tracking-tight">{businessName}</h1>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          
+             <HeaderNotifications />
           <ThemeToggle />
         </div>
       </div>
