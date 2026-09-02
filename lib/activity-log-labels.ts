@@ -44,6 +44,8 @@ export function getEventTone(eventType: string) {
 
     if (eventType.startsWith("service.")) return "Services";
 
+    if (eventType.startsWith("appointment.")) return "Appointments";
+
     return "default";
 }
 
@@ -154,6 +156,18 @@ export function getFriendlyActivityMessage(
 
         case "service.deleted":
             return `Service deleted${details?.name ? `: ${String(details.name)}` : ""}.`;
+
+        case "appointment.created":
+            return `Appointment created${details?.customer_name ? ` for ${String(details.customer_name)}` : ""}.`;
+
+        case "appointment.status_updated":
+            return `Appointment status changed${details?.status ? ` to ${String(details.status)}` : ""}.`;
+
+        case "appointment.updated":
+            return "Appointment details were updated.";
+
+        case "appointment.deleted":
+            return "Appointment was deleted.";
 
         default:
             return formatEventType(eventType);
