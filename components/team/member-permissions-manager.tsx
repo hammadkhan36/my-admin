@@ -20,8 +20,8 @@ export type PermissionMember = {
 };
 
 export type PermissionRow = {
-  key: string;
-  module: string;
+  permission_key: string;
+  feature_key: string;
   action: string;
   description: string | null;
 };
@@ -29,6 +29,7 @@ export type PermissionRow = {
 export type RolePermissionRow = {
   role: AppRole;
   permission_key: string;
+  allowed: boolean;
 };
 
 export type UserOverrideRow = {
@@ -63,16 +64,22 @@ export function MemberPermissionsManager({
   );
 
   const groupedPermissions = useMemo(() => {
-    return permissions.reduce<Record<string, PermissionRow[]>>((groups, permission) => {
-      groups[permission.module] ??= [];
-      groups[permission.module].push(permission);
-      return groups;
-    }, {});
+    return permissions.reduce<Record<string, PermissionRow[]>>(
+      (groups, permission) => {
+        groups[permission.feature_key] ??= [];
+        groups[permission.feature_key].push(permission);
+        return groups;
+      },
+      {}
+    );
   }, [permissions]);
 
-  function hasRolePermission(role: AppRole, permissionKey: string) {
+  function roleAllows(role: AppRole, permissionKey: string) {
     return rolePermissions.some(
-      (item) => item.role === role && item.permission_key === permissionKey
+      (item) =>
+        item.role === role &&
+        item.permission_key === permissionKey &&
+        item.allowed
     );
   }
 
@@ -87,11 +94,11 @@ export function MemberPermissionsManager({
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Roles & Permissions</h1>
         <p className="text-sm text-muted-foreground">
-          Role default access ke upar specific member ki permission allow/deny karo.
+          Select a member, change role, or allow/deny custom permissions.
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Members</CardTitle>
@@ -111,10 +118,17 @@ export function MemberPermissionsManager({
                 <div className="font-medium">
                   {member.full_name || member.email}
                 </div>
-                <div className="text-xs text-muted-foreground">{member.email}</div>
-                <Badge variant="outline" className="mt-2 capitalize">
-                  {member.role}
-                </Badge>
+                <div className="truncate text-xs text-muted-foreground">
+                  {member.email}
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <Badge variant="outline" className="capitalize">
+                    {member.role}
+                  </Badge>
+                  <Badge variant={member.is_active ? "secondary" : "outline"}>
+                    {member.is_active ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
               </button>
             ))}
 
@@ -127,6 +141,14 @@ export function MemberPermissionsManager({
         </Card>
 
         <div className="space-y-6">
+          {!selectedMember && (
+            <Card>
+              <CardContent className="p-6 text-sm text-muted-foreground">
+                Select a member to manage permissions.
+              </CardContent>
+            </Card>
+          )}
+
           {selectedMember && (
             <Card>
               <CardHeader>
@@ -138,7 +160,7 @@ export function MemberPermissionsManager({
                   <select
                     name="role"
                     defaultValue={selectedMember.role}
-                    className="h-10 rounded-md border bg-background px-3 text-sm"
+                    className="h-10 rounded-md border bg-background px-3 text-sm capitalize"
                   >
                     {editableRoles.map((role) => (
                       <option key={role} value={role}>
@@ -153,37 +175,47 @@ export function MemberPermissionsManager({
           )}
 
           {selectedMember &&
-            Object.entries(groupedPermissions).map(([module, modulePermissions]) => (
-              <Card key={module}>
+            Object.entries(groupedPermissions).map(([featureKey, modulePermissions]) => (
+              <Card key={featureKey}>
                 <CardHeader>
-                  <CardTitle className="text-base capitalize">{module}</CardTitle>
+                  <CardTitle className="text-base capitalize">
+                    {featureKey}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {modulePermissions.map((permission) => {
-                    const roleAllowed = hasRolePermission(
+                    const defaultAllowed = roleAllows(
                       selectedMember.role,
-                      permission.key
+                      permission.permission_key
                     );
-                    const override = getOverride(selectedMember.id, permission.key);
-                    const finalAllowed = override ? override.allowed : roleAllowed;
+                    const override = getOverride(
+                      selectedMember.id,
+                      permission.permission_key
+                    );
+                    const finalAllowed = override
+                      ? override.allowed
+                      : defaultAllowed;
 
                     return (
                       <div
-                        key={permission.key}
-                        className="flex flex-col justify-between gap-3 border-b pb-3 sm:flex-row sm:items-center"
+                        key={permission.permission_key}
+                        className="flex flex-col justify-between gap-3 border-b pb-3 last:border-0 sm:flex-row sm:items-center"
                       >
                         <div>
-                          <div className="font-medium">{permission.key}</div>
+                          <div className="font-mono text-sm font-medium">
+                            {permission.permission_key}
+                          </div>
                           <div className="text-xs text-muted-foreground">
-                            Default: {roleAllowed ? "Allowed" : "Denied"} | Final:{" "}
-                            {finalAllowed ? "Allowed" : "Denied"}
+                            Default: {defaultAllowed ? "Allowed" : "Denied"} |
+                            Final: {finalAllowed ? "Allowed" : "Denied"}
+                            {override ? " | Custom override" : ""}
                           </div>
                         </div>
 
                         <div className="flex gap-2">
                           <form action={setPermissionOverride}>
                             <input type="hidden" name="memberId" value={selectedMember.id} />
-                            <input type="hidden" name="permissionKey" value={permission.key} />
+                            <input type="hidden" name="permissionKey" value={permission.permission_key} />
                             <input type="hidden" name="allowed" value="true" />
                             <Button size="sm" variant={finalAllowed ? "default" : "outline"}>
                               Allow
@@ -192,7 +224,7 @@ export function MemberPermissionsManager({
 
                           <form action={setPermissionOverride}>
                             <input type="hidden" name="memberId" value={selectedMember.id} />
-                            <input type="hidden" name="permissionKey" value={permission.key} />
+                            <input type="hidden" name="permissionKey" value={permission.permission_key} />
                             <input type="hidden" name="allowed" value="false" />
                             <Button size="sm" variant={!finalAllowed ? "destructive" : "outline"}>
                               Deny
@@ -202,7 +234,7 @@ export function MemberPermissionsManager({
                           {override && (
                             <form action={removePermissionOverride}>
                               <input type="hidden" name="memberId" value={selectedMember.id} />
-                              <input type="hidden" name="permissionKey" value={permission.key} />
+                              <input type="hidden" name="permissionKey" value={permission.permission_key} />
                               <Button size="sm" variant="ghost">
                                 Reset
                               </Button>

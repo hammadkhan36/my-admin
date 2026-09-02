@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requirePermission } from "@/lib/auth/server";
+import { DASHBOARD_CREATABLE_ROLES } from "@/lib/auth/roles";
 import { createAdminClient } from "@/lib/supabase-admin";
-import { APP_ROLES, DASHBOARD_CREATABLE_ROLES } from "@/lib/auth/roles";
 
 const updateRoleSchema = z.object({
   memberId: z.string().uuid(),
@@ -18,7 +18,7 @@ const overrideSchema = z.object({
 });
 
 export async function updateMemberRole(formData: FormData) {
-  await requirePermission("roles.manage");
+  await requirePermission("roles.manage_overrides");
 
   const result = updateRoleSchema.safeParse({
     memberId: formData.get("memberId"),
@@ -35,9 +35,7 @@ export async function updateMemberRole(formData: FormData) {
     .eq("id", result.data.memberId)
     .maybeSingle();
 
-  if (!target) return;
-
-  if (target.role === "superadmin" || target.role === "owner") {
+  if (!target || target.role === "superadmin" || target.role === "owner") {
     return;
   }
 
@@ -51,7 +49,7 @@ export async function updateMemberRole(formData: FormData) {
 }
 
 export async function setPermissionOverride(formData: FormData) {
-  await requirePermission("roles.manage");
+  const actor = await requirePermission("roles.manage_overrides");
 
   const result = overrideSchema.safeParse({
     memberId: formData.get("memberId"),
@@ -69,9 +67,7 @@ export async function setPermissionOverride(formData: FormData) {
     .eq("id", result.data.memberId)
     .maybeSingle();
 
-  if (!target) return;
-
-  if (target.role === "superadmin" || target.role === "owner") {
+  if (!target || target.role === "superadmin" || target.role === "owner") {
     return;
   }
 
@@ -80,17 +76,16 @@ export async function setPermissionOverride(formData: FormData) {
       user_id: result.data.memberId,
       permission_key: result.data.permissionKey,
       allowed: result.data.allowed,
+      created_by: actor.id,
     },
-    {
-      onConflict: "user_id,permission_key",
-    }
+    { onConflict: "user_id,permission_key" }
   );
 
   revalidatePath("/team/roles");
 }
 
 export async function removePermissionOverride(formData: FormData) {
-  await requirePermission("roles.manage");
+  await requirePermission("roles.manage_overrides");
 
   const memberId = String(formData.get("memberId") || "");
   const permissionKey = String(formData.get("permissionKey") || "");
