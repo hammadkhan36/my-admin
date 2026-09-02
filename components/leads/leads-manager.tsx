@@ -1,9 +1,13 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { ExternalLink, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { createLead, deleteLead } from "@/app/(admin)/crm/leads/actions";
+import {
+    createLead,
+    deleteLead,
+    updateLeadStatus,
+} from "@/app/(admin)/crm/leads/actions";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,6 +36,11 @@ export type LeadRow = {
     status: string;
     priority: string;
     created_at: string;
+    page_url: string | null;
+    referrer: string | null;
+    utm_source: string | null;
+    utm_medium: string | null;
+    utm_campaign: string | null;
 };
 
 const initialState = { success: false };
@@ -47,6 +56,8 @@ const statusColors: Record<string, "default" | "secondary" | "outline" | "destru
 export function LeadsManager({ leads }: { leads: LeadRow[] }) {
     const [showForm, setShowForm] = useState(false);
     const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
+    const [sourceFilter, setSourceFilter] = useState("all");
     const [state, action, pending] = useActionState(createLead, initialState);
 
     useEffect(() => {
@@ -62,17 +73,24 @@ export function LeadsManager({ leads }: { leads: LeadRow[] }) {
 
     const filteredLeads = useMemo(() => {
         const query = search.toLowerCase().trim();
-        if (!query) return leads;
 
         return leads.filter((lead) => {
-            return (
+            const matchesSearch =
+                !query ||
                 lead.name.toLowerCase().includes(query) ||
                 lead.phone.toLowerCase().includes(query) ||
                 lead.email?.toLowerCase().includes(query) ||
-                lead.service?.toLowerCase().includes(query)
-            );
+                lead.service?.toLowerCase().includes(query);
+
+            const matchesStatus =
+                statusFilter === "all" || lead.status === statusFilter;
+
+            const matchesSource =
+                sourceFilter === "all" || lead.source === sourceFilter;
+
+            return matchesSearch && matchesStatus && matchesSource;
         });
-    }, [leads, search]);
+    }, [leads, search, statusFilter, sourceFilter]);
 
     const newLeads = leads.filter((lead) => lead.status === "new").length;
     const wonLeads = leads.filter((lead) => lead.status === "won").length;
@@ -203,14 +221,38 @@ export function LeadsManager({ leads }: { leads: LeadRow[] }) {
                 </Card>
             </div>
 
-            <div className="mb-4 flex items-center gap-2">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search by name, phone, email or service..."
-                    className="max-w-md"
-                />
+            <div className="mb-4 grid gap-3 md:grid-cols-[1fr_180px_180px]">
+                <div className="flex items-center gap-2">
+                    <Search className="h-4 w-4 text-muted-foreground" />
+                    <Input
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                        placeholder="Search by name, phone, email or service..."
+                    />
+                </div>
+
+                <select
+                    value={statusFilter}
+                    onChange={(event) => setStatusFilter(event.target.value)}
+                    className="h-10 rounded-md border bg-background px-3 text-sm"
+                >
+                    <option value="all">All Status</option>
+                    <option value="new">New</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="qualified">Qualified</option>
+                    <option value="won">Won</option>
+                    <option value="lost">Lost</option>
+                </select>
+
+                <select
+                    value={sourceFilter}
+                    onChange={(event) => setSourceFilter(event.target.value)}
+                    className="h-10 rounded-md border bg-background px-3 text-sm"
+                >
+                    <option value="all">All Sources</option>
+                    <option value="manual">Manual</option>
+                    <option value="website">Website</option>
+                </select>
             </div>
 
             <div className="overflow-hidden rounded-lg border bg-card">
@@ -222,6 +264,7 @@ export function LeadsManager({ leads }: { leads: LeadRow[] }) {
                             <TableHead>Service</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Source</TableHead>
+                            <TableHead>Tracking</TableHead>
                             <TableHead>Created</TableHead>
                             <TableHead className="text-right">Action</TableHead>
                         </TableRow>
@@ -246,9 +289,24 @@ export function LeadsManager({ leads }: { leads: LeadRow[] }) {
                                 <TableCell>{lead.service || "N/A"}</TableCell>
 
                                 <TableCell>
-                                    <Badge variant={statusColors[lead.status] ?? "outline"} className="capitalize">
-                                        {lead.status}
-                                    </Badge>
+                                    <form action={updateLeadStatus} className="flex items-center gap-2">
+                                        <input type="hidden" name="leadId" value={lead.id} />
+                                        <select
+                                            name="status"
+                                            defaultValue={lead.status}
+                                            className="h-8 rounded-md border bg-background px-2 text-xs capitalize"
+                                        >
+                                            <option value="new">New</option>
+                                            <option value="contacted">Contacted</option>
+                                            <option value="qualified">Qualified</option>
+                                            <option value="won">Won</option>
+                                            <option value="lost">Lost</option>
+                                        </select>
+
+                                        <PendingSubmitButton size="sm" variant="outline" pendingText="Saving...">
+                                            Save
+                                        </PendingSubmitButton>
+                                    </form>
                                 </TableCell>
 
                                 <TableCell>
@@ -256,6 +314,29 @@ export function LeadsManager({ leads }: { leads: LeadRow[] }) {
                                         {lead.source}
                                     </Badge>
                                 </TableCell>
+
+
+                                <TableCell>
+  <div className="space-y-1 text-xs">
+    {lead.utm_source && (
+      <Badge variant="outline">UTM: {lead.utm_source}</Badge>
+    )}
+
+    {lead.page_url ? (
+      <a
+        href={lead.page_url}
+        target="_blank"
+        rel="noreferrer"
+        className="flex max-w-[180px] items-center gap-1 truncate text-primary hover:underline"
+      >
+        <ExternalLink className="h-3 w-3" />
+        Page
+      </a>
+    ) : (
+      <span className="text-muted-foreground">No tracking</span>
+    )}
+  </div>
+</TableCell>
 
                                 <TableCell>{new Date(lead.created_at).toLocaleDateString()}</TableCell>
 
@@ -277,7 +358,7 @@ export function LeadsManager({ leads }: { leads: LeadRow[] }) {
                         {filteredLeads.length === 0 && (
                             <TableRow>
                                 <TableCell
-                                    colSpan={7}
+                                    colSpan={8}
                                     className="py-8 text-center text-sm text-muted-foreground"
                                 >
                                     No leads found.

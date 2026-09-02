@@ -68,3 +68,26 @@ notes
 history timeline
 
 
+######  is phase maan haam na api bi ready ki ha or powershell maan test ki jo successfull ha neecha given ha 
+
+<!-- Invoke-RestMethod `
+  -Uri "http://localhost:3000/api/public/leads" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body '{
+    "website_key": "lbw_2026_93Kds920sdLeadKey",
+    "name": "Test Website Lead",
+    "phone": "03001112222",
+    "email": "test@example.com",
+    "service": "Website Form Test",
+    "message": "This lead came from API test",
+    "page_url": "https://example.com/contact",
+    "referrer": "https://google.com",
+    "utm_source": "google",
+    "utm_medium": "organic",
+    "utm_campaign": "test"
+  }' -->
+
+
+
+  

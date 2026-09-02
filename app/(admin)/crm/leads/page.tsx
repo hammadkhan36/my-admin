@@ -32,7 +32,7 @@
 
 
 
-  
+
 // //   const filteredLeads = leads.filter((lead) => {
 // //     const matchesSearch = lead.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
 // //       lead.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -571,7 +571,7 @@ export default async function LeadsPage() {
   const { data } = await supabase
     .from("leads")
     .select(
-      "id, customer_id, name, phone, email, service, message, source, status, priority, created_at"
+      "id, customer_id, name, phone, email, service, message, source, status, priority, page_url, referrer, utm_source, utm_medium, utm_campaign, created_at"
     )
     .order("created_at", { ascending: false });
 
