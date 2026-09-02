@@ -42,6 +42,8 @@ export function getEventTone(eventType: string) {
         return "warning";
     }
 
+    if (eventType.startsWith("service.")) return "Services";
+
     return "default";
 }
 
@@ -138,7 +140,21 @@ export function getFriendlyActivityMessage(
         case "service_area.deleted":
             return "Service area was deleted.";
 
-            
+        case "service.created":
+            return `Service created${details?.name ? `: ${String(details.name)}` : ""}.`;
+
+        case "service.updated":
+            return `Service updated${details?.name ? `: ${String(details.name)}` : ""}.`;
+
+        case "service.activated":
+            return `Service activated${details?.name ? `: ${String(details.name)}` : ""}.`;
+
+        case "service.deactivated":
+            return `Service deactivated${details?.name ? `: ${String(details.name)}` : ""}.`;
+
+        case "service.deleted":
+            return `Service deleted${details?.name ? `: ${String(details.name)}` : ""}.`;
+
         default:
             return formatEventType(eventType);
     }
