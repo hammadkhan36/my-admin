@@ -210,3 +210,122 @@ export async function deleteLead(leadId: string) {
 
 
 
+const statusSchema = z.object({
+  leadId: z.string().uuid(),
+  status: z.enum(["new", "contacted", "qualified", "won", "lost"]),
+});
+
+const noteSchema = z.object({
+  leadId: z.string().uuid(),
+  note: z.string().trim().min(2, "Note must contain at least 2 characters"),
+});
+
+export async function updateLeadStatus(formData: FormData) {
+  const actor = await requirePermission("leads.update");
+
+  const result = statusSchema.safeParse({
+    leadId: formData.get("leadId"),
+    status: formData.get("status"),
+  });
+
+  if (!result.success) {
+    throw new Error("Invalid lead status");
+  }
+
+  const admin = createAdminClient();
+
+  const { data: currentLead } = await admin
+    .from("leads")
+    .select("status, name")
+    .eq("id", result.data.leadId)
+    .maybeSingle();
+
+  if (!currentLead) {
+    throw new Error("Lead not found");
+  }
+
+  if (currentLead.status === result.data.status) {
+    return;
+  }
+
+  const { error } = await admin
+    .from("leads")
+    .update({
+      status: result.data.status,
+    })
+    .eq("id", result.data.leadId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await admin.from("lead_status_history").insert({
+    lead_id: result.data.leadId,
+    old_status: currentLead.status,
+    new_status: result.data.status,
+    changed_by: actor.id,
+  });
+
+  await logActivity({
+    actorId: actor.id,
+    eventType: "lead.status_changed",
+    targetType: "lead",
+    targetId: result.data.leadId,
+    details: {
+      name: currentLead.name,
+      old_status: currentLead.status,
+      new_status: result.data.status,
+    },
+  });
+
+  revalidatePath("/crm/leads");
+  revalidatePath(`/crm/leads/${result.data.leadId}`);
+}
+
+export async function addLeadNote(
+  _previousState: LeadActionState,
+  formData: FormData
+): Promise<LeadActionState> {
+  const actor = await requirePermission("leads.update");
+
+  const result = noteSchema.safeParse({
+    leadId: formData.get("leadId"),
+    note: formData.get("note"),
+  });
+
+  if (!result.success) {
+    return {
+      success: false,
+      errors: result.error.flatten().fieldErrors,
+    };
+  }
+
+  const admin = createAdminClient();
+
+  const { error } = await admin.from("lead_notes").insert({
+    lead_id: result.data.leadId,
+    note: result.data.note,
+    created_by: actor.id,
+  });
+
+  if (error) {
+    return {
+      success: false,
+      message: error.message,
+    };
+  }
+
+  await logActivity({
+    actorId: actor.id,
+    eventType: "lead.note_added",
+    targetType: "lead",
+    targetId: result.data.leadId,
+  });
+
+  revalidatePath(`/crm/leads/${result.data.leadId}`);
+
+  return {
+    success: true,
+    message: "Note added successfully.",
+  };
+}
