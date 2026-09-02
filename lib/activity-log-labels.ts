@@ -107,7 +107,8 @@ export function getFriendlyActivityMessage(
             return `Customer updated${details?.name ? `: ${String(details.name)}` : ""}.`;
 
         case "lead.created":
-            return `Lead created${details?.name ? `: ${String(details.name)}` : ""}.`;
+            return `Lead created${details?.name ? `: ${String(details.name)}` : ""}${details?.source ? ` from ${String(details.source)}` : ""
+                }.`;
 
         case "lead.status_changed":
             return `Lead status changed from ${String(details?.old_status || "none")} to ${String(details?.new_status || "new")}.`;
