@@ -90,4 +90,14 @@ history timeline
 
 
 
-  
+
+
+ ##  Phase 6: Business Settings + Feature Management polish
+
+ | Area               | Kaam                                                           |
+| ------------------ | -------------------------------------------------------------- |
+| Business Settings  | owner/admin dashboard se business profile update               |
+| Super Admin        | feature enable/disable/lock controls                           |
+| Feature Management | sidebar + route guards already use kar rahe hain, ab UI polish |
+| Activity Logs      | settings/feature changes friendly logs                         |
+| Docs               | new business setup steps                                       |

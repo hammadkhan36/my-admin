@@ -119,6 +119,10 @@ export function getFriendlyActivityMessage(
         case "lead.deleted":
             return `Lead deleted${details?.name ? `: ${String(details.name)}` : ""}.`;
 
+        case "business_profile.updated":
+            return `Business profile updated${details?.business_name ? `: ${String(details.business_name)}` : ""
+                }.`;
+
         default:
             return formatEventType(eventType);
     }
