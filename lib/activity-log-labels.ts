@@ -11,92 +11,101 @@
 type ActivityDetails = Record<string, unknown> | null | undefined;
 
 function readable(value: unknown) {
-  if (typeof value === "string" && value.trim()) return value;
-  if (typeof value === "boolean") return value ? "Allowed" : "Denied";
-  if (typeof value === "number") return String(value);
-  return "";
+    if (typeof value === "string" && value.trim()) return value;
+    if (typeof value === "boolean") return value ? "Allowed" : "Denied";
+    if (typeof value === "number") return String(value);
+    return "";
 }
 
 export function formatEventType(eventType: string) {
-  return eventType
-    .split(".")
-    .map((part) => part.replaceAll("_", " "))
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+    return eventType
+        .split(".")
+        .map((part) => part.replaceAll("_", " "))
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
 }
 
 export function getEventModule(eventType: string) {
-  return eventType.split(".")[0] || "system";
+    return eventType.split(".")[0] || "system";
 }
 
 export function getEventTone(eventType: string) {
-  if (eventType.includes("deleted") || eventType.includes("removed")) {
-    return "destructive";
-  }
+    if (eventType.includes("deleted") || eventType.includes("removed")) {
+        return "destructive";
+    }
 
-  if (eventType.includes("created") || eventType.includes("activated")) {
-    return "success";
-  }
+    if (eventType.includes("created") || eventType.includes("activated")) {
+        return "success";
+    }
 
-  if (eventType.includes("updated") || eventType.includes("changed")) {
-    return "warning";
-  }
+    if (eventType.includes("updated") || eventType.includes("changed")) {
+        return "warning";
+    }
 
-  return "default";
+    return "default";
 }
 
 export function getFriendlyActivityMessage(
-  eventType: string,
-  details?: ActivityDetails
+    eventType: string,
+    details?: ActivityDetails
 ) {
-  const permission = readable(details?.permission_key);
-  const role = readable(details?.role);
-  const email = readable(details?.email);
-  const allowed = readable(details?.allowed);
+    const permission = readable(details?.permission_key);
+    const role = readable(details?.role);
+    const email = readable(details?.email);
+    const allowed = readable(details?.allowed);
 
-  switch (eventType) {
-    case "member.created":
-      return email
-        ? `New team member created with ${role || "selected"} role: ${email}.`
-        : "New team member created.";
+    switch (eventType) {
+        case "member.created":
+            return email
+                ? `New team member created with ${role || "selected"} role: ${email}.`
+                : "New team member created.";
 
-    case "member.activated":
-      return "Team member account was activated.";
+        case "member.activated":
+            return "Team member account was activated.";
 
-    case "member.deactivated":
-      return "Team member account was deactivated.";
+        case "member.deactivated":
+            return "Team member account was deactivated.";
 
-    case "member.deleted":
-      return "Team member account was deleted.";
+        case "member.deleted":
+            return "Team member account was deleted.";
 
-    case "member.password_updated":
-      return "Team member password was updated.";
+        case "member.password_updated":
+            return "Team member password was updated.";
 
-    case "member.role_updated":
-      return role ? `Team member role was changed to ${role}.` : "Team member role was changed.";
+        case "member.role_updated":
+            return role ? `Team member role was changed to ${role}.` : "Team member role was changed.";
 
-    case "member.permission_override_updated":
-      return permission
-        ? `Permission ${permission} was changed to ${allowed}.`
-        : "Member permission was updated.";
+        case "member.permission_override_updated":
+            return permission
+                ? `Permission ${permission} was changed to ${allowed}.`
+                : "Member permission was updated.";
 
-    case "member.permission_override_removed":
-      return permission
-        ? `Custom permission override was removed for ${permission}.`
-        : "Custom permission override was removed.";
+        case "member.permission_override_removed":
+            return permission
+                ? `Custom permission override was removed for ${permission}.`
+                : "Custom permission override was removed.";
 
-    case "business_settings.updated":
-      return "Business branding/contact settings were updated.";
+        case "business_settings.updated":
+            return "Business branding/contact settings were updated.";
 
-    case "subscription.updated":
-      return `Subscription was updated${role ? ` for ${role}` : ""}.`;
+        case "subscription.updated":
+            return `Subscription was updated${role ? ` for ${role}` : ""}.`;
 
-    case "feature_setting.updated":
-      return "Feature access setting was updated.";
+        case "feature_setting.updated":
+            return "Feature access setting was updated.";
 
-    default:
-      return formatEventType(eventType);
-  }
+        case "customer.created":
+            return `Customer created${details?.name ? `: ${String(details.name)}` : ""}.`;
+
+        case "customer.deleted":
+            return `Customer deleted${details?.name ? `: ${String(details.name)}` : ""}.`;
+
+        case "customer.duplicate_phone_detected":
+            return "Duplicate customer phone number was detected.";
+
+        default:
+            return formatEventType(eventType);
+    }
 }
 
 

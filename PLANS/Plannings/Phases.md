@@ -30,3 +30,21 @@ Sidebar permission filtering
 Direct URL route guards	
 Docs basic auth guide	 
 Super admin dashboard polish	
+
+
+
+
+## Phase 3: Customers Module
+
+
+Customers pehle banayenge kyun ke leads, appointments, notifications sab customers se link honge.
+
+
+| Feature       | Kaam                                      |
+| ------------- | ----------------------------------------- |
+| Customer list | all customers show                        |
+| Add customer  | manual customer create                    |
+| Phone unique  | same phone duplicate customer nahi banega |
+| Search        | name/phone/email se search                |
+| Status/cards  | total customers stats                     |
+| Activity log  | customer create/update log                |
