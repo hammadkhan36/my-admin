@@ -24,6 +24,7 @@ import { z } from "zod";
 import { requirePermission } from "@/lib/auth/server";
 import { DASHBOARD_CREATABLE_ROLES } from "@/lib/auth/roles";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { logActivity } from "@/lib/activity-log";
 
 export type CreateMemberState = {
   success?: boolean;
@@ -95,17 +96,16 @@ export async function createTeamMember(
     };
   }
 
-  await admin.from("audit_logs").insert({
-    actor_id: actor.id,
-    event_type: "member.created",
-    target_type: "profile",
-    target_id: data.user.id,
+  await logActivity({
+    actorId: actor.id,
+    eventType: "member.created",
+    targetType: "profile",
+    targetId: data.user.id,
     details: {
       role: result.data.role,
       email: result.data.email,
     },
   });
-
   revalidatePath("/team/staff");
 
   return {
@@ -138,11 +138,11 @@ export async function setMemberActive(memberId: string, isActive: boolean) {
     .update({ is_active: isActive })
     .eq("id", memberId);
 
-  await admin.from("audit_logs").insert({
-    actor_id: actor.id,
-    event_type: isActive ? "member.activated" : "member.deactivated",
-    target_type: "profile",
-    target_id: memberId,
+  await logActivity({
+    actorId: actor.id,
+    eventType: isActive ? "member.activated" : "member.deactivated",
+    targetType: "profile",
+    targetId: memberId,
   });
 
   revalidatePath("/team/staff");
@@ -191,11 +191,11 @@ export async function updateMemberPassword(formData: FormData) {
     password: result.data.password,
   });
 
-  await admin.from("audit_logs").insert({
-    actor_id: actor.id,
-    event_type: "member.password_updated",
-    target_type: "profile",
-    target_id: result.data.memberId,
+  await logActivity({
+    actorId: actor.id,
+    eventType: "member.password_updated",
+    targetType: "profile",
+    targetId: result.data.memberId,
   });
 
   revalidatePath("/team/staff");
@@ -224,11 +224,11 @@ export async function deleteTeamMember(memberId: string) {
 
   await admin.auth.admin.deleteUser(memberId);
 
-  await admin.from("audit_logs").insert({
-    actor_id: actor.id,
-    event_type: "member.deleted",
-    target_type: "profile",
-    target_id: memberId,
+  await logActivity({
+    actorId: actor.id,
+    eventType: "member.deleted",
+    targetType: "profile",
+    targetId: memberId,
   });
 
   revalidatePath("/team/staff");

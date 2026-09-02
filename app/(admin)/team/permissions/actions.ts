@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requirePermission } from "@/lib/auth/server";
 import { DASHBOARD_CREATABLE_ROLES } from "@/lib/auth/roles";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { logActivity } from "@/lib/activity-log";
 
 const updateRoleSchema = z.object({
   memberId: z.string().uuid(),
@@ -50,13 +51,15 @@ export async function updateMemberRole(formData: FormData) {
     throw new Error(error.message);
   }
 
-  await admin.from("audit_logs").insert({
-    actor_id: actor.id,
-    event_type: "member.role_updated",
-    target_type: "profile",
-    target_id: result.data.memberId,
-    details: { role: result.data.role },
-  });
+await logActivity({
+  actorId: actor.id,
+  eventType: "member.role_updated",
+  targetType: "profile",
+  targetId: result.data.memberId,
+  details: {
+    role: result.data.role,
+  },
+});
 
   revalidatePath("/team/roles");
   revalidatePath("/team/staff");
@@ -102,16 +105,16 @@ export async function setPermissionOverride(formData: FormData) {
     throw new Error(error.message);
   }
 
-  await admin.from("audit_logs").insert({
-    actor_id: actor.id,
-    event_type: "member.permission_override_updated",
-    target_type: "profile",
-    target_id: result.data.memberId,
-    details: {
-      permission_key: result.data.permissionKey,
-      allowed: result.data.allowed,
-    },
-  });
+  await logActivity({
+  actorId: actor.id,
+  eventType: "member.permission_override_updated",
+  targetType: "profile",
+  targetId: result.data.memberId,
+  details: {
+    permission_key: result.data.permissionKey,
+    allowed: result.data.allowed,
+  },
+});
 
   revalidatePath("/team/roles");
 }
@@ -138,13 +141,15 @@ export async function removePermissionOverride(formData: FormData) {
     throw new Error(error.message);
   }
 
-  await admin.from("audit_logs").insert({
-    actor_id: actor.id,
-    event_type: "member.permission_override_removed",
-    target_type: "profile",
-    target_id: memberId,
-    details: { permission_key: permissionKey },
-  });
+ await logActivity({
+  actorId: actor.id,
+  eventType: "member.permission_override_removed",
+  targetType: "profile",
+  targetId: memberId,
+  details: {
+    permission_key: permissionKey,
+  },
+});
 
   revalidatePath("/team/roles");
 }
