@@ -422,6 +422,7 @@ import {
   formatEventType,
   getEventModule,
   getEventTone,
+  getFriendlyActivityMessage,
 } from "@/lib/activity-log-labels";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -443,17 +444,17 @@ type ActivityLogRow = {
   details: Record<string, unknown> | null;
   created_at: string;
   profiles:
-    | {
-        full_name: string | null;
-        email: string | null;
-        role: string | null;
-      }
-    | {
-        full_name: string | null;
-        email: string | null;
-        role: string | null;
-      }[]
-    | null;
+  | {
+    full_name: string | null;
+    email: string | null;
+    role: string | null;
+  }
+  | {
+    full_name: string | null;
+    email: string | null;
+    role: string | null;
+  }[]
+  | null;
 };
 
 function getActor(profile: ActivityLogRow["profiles"]) {
@@ -580,10 +581,10 @@ export default async function ActivityLogsPage() {
                       <EventIcon tone={tone} />
                       <div>
                         <div className="font-medium">
-                          {formatEventType(log.event_type)}
+                          {getFriendlyActivityMessage(log.event_type, log.details)}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {log.event_type}
+                          {formatEventType(log.event_type)} · {log.event_type}
                         </div>
                       </div>
                     </div>

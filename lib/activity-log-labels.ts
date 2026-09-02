@@ -4,6 +4,19 @@
 // member.permission_override_updated -> Member Permission Override Updated
 
 
+// UI mein readable message show hoga, 
+// aur niche technical event bhi small text mein rahega debugging ke liye
+
+
+type ActivityDetails = Record<string, unknown> | null | undefined;
+
+function readable(value: unknown) {
+  if (typeof value === "string" && value.trim()) return value;
+  if (typeof value === "boolean") return value ? "Allowed" : "Denied";
+  if (typeof value === "number") return String(value);
+  return "";
+}
+
 export function formatEventType(eventType: string) {
   return eventType
     .split(".")
@@ -31,3 +44,59 @@ export function getEventTone(eventType: string) {
 
   return "default";
 }
+
+export function getFriendlyActivityMessage(
+  eventType: string,
+  details?: ActivityDetails
+) {
+  const permission = readable(details?.permission_key);
+  const role = readable(details?.role);
+  const email = readable(details?.email);
+  const allowed = readable(details?.allowed);
+
+  switch (eventType) {
+    case "member.created":
+      return email
+        ? `New team member created with ${role || "selected"} role: ${email}.`
+        : "New team member created.";
+
+    case "member.activated":
+      return "Team member account was activated.";
+
+    case "member.deactivated":
+      return "Team member account was deactivated.";
+
+    case "member.deleted":
+      return "Team member account was deleted.";
+
+    case "member.password_updated":
+      return "Team member password was updated.";
+
+    case "member.role_updated":
+      return role ? `Team member role was changed to ${role}.` : "Team member role was changed.";
+
+    case "member.permission_override_updated":
+      return permission
+        ? `Permission ${permission} was changed to ${allowed}.`
+        : "Member permission was updated.";
+
+    case "member.permission_override_removed":
+      return permission
+        ? `Custom permission override was removed for ${permission}.`
+        : "Custom permission override was removed.";
+
+    case "business_settings.updated":
+      return "Business branding/contact settings were updated.";
+
+    case "subscription.updated":
+      return `Subscription was updated${role ? ` for ${role}` : ""}.`;
+
+    case "feature_setting.updated":
+      return "Feature access setting was updated.";
+
+    default:
+      return formatEventType(eventType);
+  }
+}
+
+
