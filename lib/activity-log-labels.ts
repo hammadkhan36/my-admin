@@ -103,6 +103,9 @@ export function getFriendlyActivityMessage(
         case "customer.duplicate_phone_detected":
             return "Duplicate customer phone number was detected.";
 
+        case "customer.updated":
+            return `Customer updated${details?.name ? `: ${String(details.name)}` : ""}.`;
+
         default:
             return formatEventType(eventType);
     }

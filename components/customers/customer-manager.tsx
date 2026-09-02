@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -213,7 +214,12 @@ export function CustomerManager({ customers }: { customers: CustomerRow[] }) {
             {filteredCustomers.map((customer) => (
               <TableRow key={customer.id}>
                 <TableCell>
-                  <div className="font-medium">{customer.name}</div>
+                 <Link
+  href={`/crm/customers/${customer.id}`}
+  className="font-medium text-primary hover:underline"
+>
+  {customer.name}
+</Link>
                   <div className="max-w-[220px] truncate text-xs text-muted-foreground">
                     {customer.address || customer.notes || "No extra details"}
                   </div>
