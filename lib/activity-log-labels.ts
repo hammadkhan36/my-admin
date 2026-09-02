@@ -123,6 +123,22 @@ export function getFriendlyActivityMessage(
             return `Business profile updated${details?.business_name ? `: ${String(details.business_name)}` : ""
                 }.`;
 
+        case "business_hours.updated":
+            return "Business hours were updated.";
+
+        case "service_area.created":
+            return `Service area created${details?.area_name ? `: ${String(details.area_name)}` : ""}.`;
+
+        case "service_area.activated":
+            return "Service area was activated.";
+
+        case "service_area.deactivated":
+            return "Service area was deactivated.";
+
+        case "service_area.deleted":
+            return "Service area was deleted.";
+
+            
         default:
             return formatEventType(eventType);
     }
