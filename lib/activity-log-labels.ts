@@ -106,6 +106,18 @@ export function getFriendlyActivityMessage(
         case "customer.updated":
             return `Customer updated${details?.name ? `: ${String(details.name)}` : ""}.`;
 
+        case "lead.created":
+            return `Lead created${details?.name ? `: ${String(details.name)}` : ""}.`;
+
+        case "lead.status_changed":
+            return `Lead status changed from ${String(details?.old_status || "none")} to ${String(details?.new_status || "new")}.`;
+
+        case "lead.note_added":
+            return "Note added to lead.";
+
+        case "lead.deleted":
+            return `Lead deleted${details?.name ? `: ${String(details.name)}` : ""}.`;
+
         default:
             return formatEventType(eventType);
     }

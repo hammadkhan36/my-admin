@@ -48,3 +48,23 @@ Customers pehle banayenge kyun ke leads, appointments, notifications sab custome
 | Search        | name/phone/email se search                |
 | Status/cards  | total customers stats                     |
 | Activity log  | customer create/update log                |
+
+
+
+
+
+## Phase 4
+
+Phase 4 mein done:
+
+leads table
+lead notes/history tables
+manual lead create
+auto customer create/attach
+lead list/search/delete
+lead detail
+status update
+notes
+history timeline
+
+
