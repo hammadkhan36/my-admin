@@ -455,6 +455,11 @@ type ActivityLogRow = {
     role: string | null;
   }[]
   | null;
+ target_profile: {
+  full_name: string | null;
+  email: string | null;
+  role: string | null;
+} | null;
 };
 
 function getActor(profile: ActivityLogRow["profiles"]) {
@@ -475,6 +480,25 @@ function getActor(profile: ActivityLogRow["profiles"]) {
   };
 }
 
+
+function getTarget(log: ActivityLogRow) {
+  const targetProfile = log.target_profile;
+
+  if (targetProfile) {
+    return {
+      title: targetProfile.full_name || targetProfile.email || "Unknown member",
+      subtitle: targetProfile.email || targetProfile.role || "",
+    };
+  }
+
+  return {
+    title: log.target_type || "System",
+    subtitle: log.target_id || "",
+  };
+}
+
+
+
 function EventIcon({ tone }: { tone: string }) {
   if (tone === "success") return <CheckCircle2 className="h-4 w-4 text-emerald-600" />;
   if (tone === "destructive") return <ShieldAlert className="h-4 w-4 text-red-600" />;
@@ -487,28 +511,56 @@ export default async function ActivityLogsPage() {
 
   const supabase = await createClient();
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("audit_logs")
     .select(
       `
-      id,
-      actor_id,
-      event_type,
-      target_type,
-      target_id,
-      details,
-      created_at,
-      profiles:actor_id (
-        full_name,
-        email,
-        role
-      )
-    `
+    id,
+    actor_id,
+    event_type,
+    target_type,
+    target_id,
+    details,
+    created_at,
+    profiles:actor_id (
+      full_name,
+      email,
+      role
+    )
+  `
     )
     .order("created_at", { ascending: false })
     .limit(100);
 
-  const logs = (data ?? []) as ActivityLogRow[];
+  if (error) {
+    console.error("Activity logs query failed:", error.message);
+  }
+
+  const rawLogs = (data ?? []) as Omit<ActivityLogRow, "target_profile">[];
+
+  const targetProfileIds = rawLogs
+    .filter((log) => log.target_type === "profile" && log.target_id)
+    .map((log) => log.target_id as string);
+
+  const { data: targetProfiles } = targetProfileIds.length
+    ? await supabase
+      .from("profiles")
+      .select("id, full_name, email, role")
+      .in("id", targetProfileIds)
+    : { data: [] };
+
+  const targetProfileMap = new Map(
+    (targetProfiles ?? []).map((profile) => [profile.id, profile])
+  );
+
+  const logs = rawLogs.map((log) => ({
+    ...log,
+    target_profile:
+      log.target_type === "profile" && log.target_id
+        ? targetProfileMap.get(log.target_id) ?? null
+        : null,
+  })) as ActivityLogRow[];
+
 
   const todayCount = logs.filter((log) => {
     const created = new Date(log.created_at);
@@ -573,6 +625,7 @@ export default async function ActivityLogsPage() {
             {logs.map((log) => {
               const actor = getActor(log.profiles);
               const tone = getEventTone(log.event_type);
+              const target = getTarget(log);
 
               return (
                 <TableRow key={log.id}>
@@ -602,9 +655,9 @@ export default async function ActivityLogsPage() {
                   </TableCell>
 
                   <TableCell>
-                    <div className="text-sm">{log.target_type || "N/A"}</div>
-                    <div className="max-w-[180px] truncate text-xs text-muted-foreground">
-                      {log.target_id || ""}
+                    <div className="text-sm font-medium">{target.title}</div>
+                    <div className="max-w-[220px] truncate text-xs text-muted-foreground">
+                      {target.subtitle}
                     </div>
                   </TableCell>
 
