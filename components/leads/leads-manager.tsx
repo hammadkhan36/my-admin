@@ -317,26 +317,26 @@ export function LeadsManager({ leads }: { leads: LeadRow[] }) {
 
 
                                 <TableCell>
-  <div className="space-y-1 text-xs">
-    {lead.utm_source && (
-      <Badge variant="outline">UTM: {lead.utm_source}</Badge>
-    )}
+                                    <div className="space-y-1 text-xs">
+                                        {lead.utm_source && (
+                                            <Badge variant="outline">UTM: {lead.utm_source}</Badge>
+                                        )}
 
-    {lead.page_url ? (
-      <a
-        href={lead.page_url}
-        target="_blank"
-        rel="noreferrer"
-        className="flex max-w-[180px] items-center gap-1 truncate text-primary hover:underline"
-      >
-        <ExternalLink className="h-3 w-3" />
-        Page
-      </a>
-    ) : (
-      <span className="text-muted-foreground">No tracking</span>
-    )}
-  </div>
-</TableCell>
+                                        {lead.page_url ? (
+                                            <a
+                                                href={lead.page_url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="flex max-w-[180px] items-center gap-1 truncate text-primary hover:underline"
+                                            >
+                                                <ExternalLink className="h-3 w-3" />
+                                                Page
+                                            </a>
+                                        ) : (
+                                            <span className="text-muted-foreground">No tracking</span>
+                                        )}
+                                    </div>
+                                </TableCell>
 
                                 <TableCell>{new Date(lead.created_at).toLocaleDateString()}</TableCell>
 
@@ -371,3 +371,8 @@ export function LeadsManager({ leads }: { leads: LeadRow[] }) {
         </div>
     );
 }
+
+
+
+
+
