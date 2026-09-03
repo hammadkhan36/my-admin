@@ -7,10 +7,10 @@ import { createClient } from "@/lib/supabase-server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AppointmentActionForm } from "@/components/appointments/appointment-action-form";
 import {
-    deleteAppointment,
-    updateAppointmentStatus,
-    //   updateAppointmentDetails,
+    deleteAppointmentSafe,
+    updateAppointmentStatusSafe,
 } from "@/app/(admin)/appointments/actions";
 
 import { AppointmentEditForm } from "@/components/appointments/appointment-edit-form";
@@ -319,22 +319,26 @@ export default async function AppointmentDetailPage({
                     <CardContent className="flex flex-wrap gap-2">
                         {["pending", "approved", "completed", "rejected", "cancelled", "no_show"].map(
                             (status) => (
-                                <form key={status} action={updateAppointmentStatus}>
-                                    <input type="hidden" name="id" value={item.id} />
-                                    <input type="hidden" name="status" value={status} />
-                                    <Button type="submit" variant="outline">
-                                        {status.replace("_", " ")}
-                                    </Button>
-                                </form>
+                                <AppointmentActionForm
+                                    key={status}
+                                    action={updateAppointmentStatusSafe}
+                                    fields={{
+                                        id: item.id,
+                                        status,
+                                    }}
+                                >
+                                    {status.replace("_", " ")}
+                                </AppointmentActionForm>
                             )
                         )}
 
-                        <form action={deleteAppointment}>
-                            <input type="hidden" name="id" value={item.id} />
-                            <Button type="submit" variant="destructive">
-                                Delete
-                            </Button>
-                        </form>
+                        <AppointmentActionForm
+                            action={deleteAppointmentSafe}
+                            fields={{ id: item.id }}
+                            variant="destructive"
+                        >
+                            Delete
+                        </AppointmentActionForm>
                     </CardContent>
                 </Card>
 

@@ -220,6 +220,23 @@ export async function updateAppointmentStatus(formData: FormData) {
   revalidatePath(`/appointments/${id}`);
 }
 
+export async function updateAppointmentStatusSafe(
+  _prevState: AppointmentActionState,
+  formData: FormData
+): Promise<AppointmentActionState> {
+  try {
+    await updateAppointmentStatus(formData);
+    return success("Appointment status updated successfully.");
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Appointment status could not be updated.";
+
+    return failure(message);
+  }
+}
+
 export async function updateAppointmentDetails(formData: FormData) {
   await requirePermission("appointments.update");
   const profile = await requireProfile();
@@ -318,4 +335,21 @@ export async function deleteAppointment(formData: FormData) {
   });
 
   revalidatePath("/appointments");
+}
+
+export async function deleteAppointmentSafe(
+  _prevState: AppointmentActionState,
+  formData: FormData
+): Promise<AppointmentActionState> {
+  try {
+    await deleteAppointment(formData);
+    return success("Appointment deleted successfully.");
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Appointment could not be deleted.";
+
+    return failure(message);
+  }
 }
