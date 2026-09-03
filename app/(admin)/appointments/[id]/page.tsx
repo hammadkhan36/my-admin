@@ -10,8 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   deleteAppointment,
   updateAppointmentStatus,
-  updateAppointmentDetails,
+//   updateAppointmentDetails,
 } from "@/app/(admin)/appointments/actions";
+
+import { AppointmentEditForm } from "@/components/appointments/appointment-edit-form";
 
 type AppointmentDetail = {
   id: string;
@@ -227,66 +229,12 @@ export default async function AppointmentDetailPage({
         </Card>
 
 
-        <Card className="lg:col-span-2">
+       <Card className="lg:col-span-2">
   <CardHeader>
     <CardTitle>Edit / Reschedule</CardTitle>
   </CardHeader>
   <CardContent>
-    <form action={updateAppointmentDetails} className="grid gap-4 md:grid-cols-2">
-      <input type="hidden" name="id" value={item.id} />
-
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Date</label>
-        <input
-          name="appointment_date"
-          type="date"
-          defaultValue={item.appointment_date}
-          required
-          className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Time</label>
-        <input
-          name="appointment_time"
-          type="time"
-          defaultValue={item.appointment_time}
-          required
-          className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Service</label>
-        <select
-          name="service_id"
-          defaultValue={item.service_id ?? ""}
-          className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-        >
-          <option value="">No service</option>
-          {serviceOptions.map((service) => (
-            <option key={service.id} value={service.id}>
-              {service.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Notes</label>
-        <input
-          name="notes"
-          defaultValue={item.notes ?? ""}
-          placeholder="Appointment notes"
-          className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-        />
-      </div>
-
-      <div className="md:col-span-2">
-        <Button type="submit">Save Changes</Button>
-      </div>
-    </form>
+    <AppointmentEditForm appointment={item} services={serviceOptions} />
   </CardContent>
 </Card>
 

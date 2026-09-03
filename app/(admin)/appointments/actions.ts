@@ -8,6 +8,20 @@ import { createNotification } from "@/lib/notifications";
 import { checkAppointmentAvailability } from "@/lib/appointments/availability";
 
 
+export type AppointmentActionState = {
+  ok: boolean;
+  message: string;
+};
+
+
+function success(message: string): AppointmentActionState {
+  return { ok: true, message };
+}
+
+function failure(message: string): AppointmentActionState {
+  return { ok: false, message };
+}
+
 async function getOrCreateCustomer(input: {
   name: string;
   phone: string;
@@ -211,6 +225,23 @@ export async function updateAppointmentDetails(formData: FormData) {
 
   revalidatePath("/appointments");
   revalidatePath(`/appointments/${id}`);
+}
+
+export async function updateAppointmentDetailsSafe(
+  _prevState: AppointmentActionState,
+  formData: FormData
+): Promise<AppointmentActionState> {
+  try {
+    await updateAppointmentDetails(formData);
+    return success("Appointment updated successfully.");
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Appointment could not be updated.";
+
+    return failure(message);
+  }
 }
 
 export async function deleteAppointment(formData: FormData) {
