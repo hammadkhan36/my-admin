@@ -5,6 +5,7 @@ import { requirePermission, requireProfile } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase-server";
 import { logActivity } from "@/lib/activity-log";
 import { createNotification } from "@/lib/notifications";
+import { checkAppointmentAvailability } from "@/lib/appointments/availability";
 
 async function getOrCreateCustomer(input: {
   name: string;
@@ -55,6 +56,15 @@ export async function createAppointment(formData: FormData) {
   if (!customerName || !customerPhone || !appointmentDate || !appointmentTime) {
     throw new Error("Name, phone, date and time are required.");
   }
+
+  const availability = await checkAppointmentAvailability({
+  appointmentDate,
+  appointmentTime,
+});
+
+if (!availability.available) {
+  throw new Error(availability.reason || "Selected appointment time is not available.");
+}
 
   const customerId = await getOrCreateCustomer({
     name: customerName,

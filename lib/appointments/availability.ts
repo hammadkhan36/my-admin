@@ -1,0 +1,72 @@
+import { createAdminClient } from "@/lib/supabase-admin";
+
+type AvailabilityResult = {
+  available: boolean;
+  reason?: string;
+};
+
+function timeToMinutes(time: string) {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+export async function checkAppointmentAvailability(input: {
+  appointmentDate: string;
+  appointmentTime: string;
+}): Promise<AvailabilityResult> {
+  const supabase = createAdminClient();
+
+  const date = new Date(`${input.appointmentDate}T00:00:00`);
+  const dayOfWeek = date.getDay();
+
+  const { data: hours, error } = await supabase
+    .from("business_hours")
+    .select("day_of_week, opens_at, closes_at, is_closed, is_24h")
+    .eq("day_of_week", dayOfWeek)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      available: false,
+      reason: error.message,
+    };
+  }
+
+  if (!hours) {
+    return {
+      available: false,
+      reason: "Business hours are not configured for this day.",
+    };
+  }
+
+  if (hours.is_closed) {
+    return {
+      available: false,
+      reason: "Business is closed on this day.",
+    };
+  }
+
+  if (hours.is_24h) {
+    return { available: true };
+  }
+
+  if (!hours.opens_at || !hours.closes_at) {
+    return {
+      available: false,
+      reason: "Opening and closing time is missing for this day.",
+    };
+  }
+
+  const requestedMinutes = timeToMinutes(input.appointmentTime);
+  const openMinutes = timeToMinutes(hours.opens_at);
+  const closeMinutes = timeToMinutes(hours.closes_at);
+
+  if (requestedMinutes < openMinutes || requestedMinutes >= closeMinutes) {
+    return {
+      available: false,
+      reason: `Selected time is outside business hours.`,
+    };
+  }
+
+  return { available: true };
+}
