@@ -60,6 +60,7 @@ export async function createAppointment(formData: FormData) {
   const availability = await checkAppointmentAvailability({
   appointmentDate,
   appointmentTime,
+   serviceId,
 });
 
 if (!availability.available) {

@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
         const availability = await checkAppointmentAvailability({
             appointmentDate,
             appointmentTime,
+            serviceId,
         });
 
         if (!availability.available) {
