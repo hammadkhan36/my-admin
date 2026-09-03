@@ -38,6 +38,7 @@ export function getEventModule(eventType: string) {
     if (eventType.startsWith("appointment.")) return "Appointments";
     if (eventType.startsWith("report.")) return "Reports";
     if (eventType.startsWith("faq.")) return "FAQs";
+    if (eventType.startsWith("testimonial.")) return "Testimonials";
 
     return eventType.split(".")[0] || "System";
 }
@@ -205,6 +206,15 @@ export function getFriendlyActivityMessage(
 
         case "faq.deleted":
             return `FAQ deleted${details?.question ? `: ${String(details.question)}` : ""}.`;
+
+        case "testimonial.created":
+            return `Testimonial created${details?.customer_name ? `: ${String(details.customer_name)}` : ""}.`;
+
+        case "testimonial.updated":
+            return `Testimonial updated${details?.customer_name ? `: ${String(details.customer_name)}` : ""}.`;
+
+        case "testimonial.deleted":
+            return `Testimonial deleted${details?.customer_name ? `: ${String(details.customer_name)}` : ""}.`;
 
 
         default:

@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
     { data: businessHours, error: hoursError },
     { data: serviceAreas, error: areasError },
     { data: faqs, error: faqsError },
+    { data: testimonials, error: testimonialsError },
   ] = await Promise.all([
     supabase
       .from("business_settings")
@@ -91,6 +92,13 @@ export async function GET(request: NextRequest) {
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false }),
 
+    supabase
+      .from("testimonials")
+      .select("id, customer_name, customer_role, quote, rating, image_url, sort_order")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false }),
+
 
   ]);
 
@@ -100,6 +108,7 @@ export async function GET(request: NextRequest) {
   if (hoursError) return fail(hoursError.message, 500);
   if (areasError) return fail(areasError.message, 500);
   if (faqsError) return fail(faqsError.message, 500);
+  if (testimonialsError) return fail(testimonialsError.message, 500);
 
   return ok({
     business: businessSettings,
@@ -107,5 +116,6 @@ export async function GET(request: NextRequest) {
     business_hours: businessHours ?? [],
     service_areas: serviceAreas ?? [],
     faqs: faqs ?? [],
+    testimonials: testimonials ?? [],
   });
 }
