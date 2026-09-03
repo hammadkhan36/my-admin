@@ -178,7 +178,10 @@ export function getFriendlyActivityMessage(
             return `Appointment created${details?.customer_name ? ` for ${String(details.customer_name)}` : ""}.`;
 
         case "appointment.status_updated":
-            return `Appointment status changed${details?.status ? ` to ${String(details.status)}` : ""}.`;
+            return `Appointment status changed from ${String(
+                details?.old_status || "none"
+            )} to ${String(details?.new_status || details?.status || "new")}.`;
+
 
         case "appointment.updated":
             return `Appointment details were updated${details?.date ? ` for ${String(details.date)}` : ""}.`;

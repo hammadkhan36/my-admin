@@ -65,7 +65,7 @@ export async function createAppointment(formData: FormData) {
   const customerEmail = String(formData.get("customer_email") || "").trim() || null;
   const serviceId = String(formData.get("service_id") || "") || null;
   const appointmentDate = String(formData.get("appointment_date") || "");
-const appointmentTime = String(formData.get("appointment_time") || "").slice(0, 5);
+  const appointmentTime = String(formData.get("appointment_time") || "").slice(0, 5);
   const notes = String(formData.get("notes") || "").trim() || null;
 
   if (!customerName || !customerPhone || !appointmentDate || !appointmentTime) {
@@ -73,14 +73,14 @@ const appointmentTime = String(formData.get("appointment_time") || "").slice(0, 
   }
 
   const availability = await checkAppointmentAvailability({
-  appointmentDate,
-  appointmentTime,
-   serviceId,
-});
+    appointmentDate,
+    appointmentTime,
+    serviceId,
+  });
 
-if (!availability.available) {
-  throw new Error(availability.reason || "Selected appointment time is not available.");
-}
+  if (!availability.available) {
+    throw new Error(availability.reason || "Selected appointment time is not available.");
+  }
 
   const customerId = await getOrCreateCustomer({
     name: customerName,
@@ -108,6 +108,16 @@ if (!availability.available) {
     .single();
 
   if (error) throw new Error(error.message);
+
+
+  await supabase.from("appointment_status_history").insert({
+    appointment_id: data.id,
+    old_status: null,
+    new_status: "pending",
+    changed_by: profile.id,
+    note: "Appointment created",
+  });
+
 
   await logActivity({
     actorId: profile.id,
@@ -157,6 +167,21 @@ export async function updateAppointmentStatus(formData: FormData) {
 
   if (!id || !status) throw new Error("Appointment id and status are required.");
 
+  const { data: current, error: currentError } = await supabase
+    .from("appointments")
+    .select("status")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (currentError) throw new Error(currentError.message);
+  if (!current) throw new Error("Appointment not found.");
+
+  if (current.status === status) {
+    revalidatePath("/appointments");
+    revalidatePath(`/appointments/${id}`);
+    return;
+  }
+
   const { error } = await supabase
     .from("appointments")
     .update({ status })
@@ -164,23 +189,35 @@ export async function updateAppointmentStatus(formData: FormData) {
 
   if (error) throw new Error(error.message);
 
+  await supabase.from("appointment_status_history").insert({
+    appointment_id: id,
+    old_status: current.status,
+    new_status: status,
+    changed_by: profile.id,
+    note: `Status changed from ${current.status} to ${status}`,
+  });
+
   await logActivity({
     actorId: profile.id,
     eventType: "appointment.status_updated",
     targetType: "appointment",
     targetId: id,
-    details: { status },
+    details: {
+      old_status: current.status,
+      new_status: status,
+    },
   });
 
   await createNotification({
     title: "Appointment status updated",
-    message: `Appointment marked as ${status}.`,
+    message: `Appointment status changed from ${current.status} to ${status}.`,
     type: "info",
-    targetUrl: "/appointments",
+    targetUrl: `/appointments/${id}`,
     actorId: profile.id,
   });
 
   revalidatePath("/appointments");
+  revalidatePath(`/appointments/${id}`);
 }
 
 export async function updateAppointmentDetails(formData: FormData) {

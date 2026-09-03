@@ -43,6 +43,27 @@ type AppointmentDetail = {
     } | null;
 };
 
+
+type StatusHistoryRow = {
+    id: string;
+    old_status: string | null;
+    new_status: string;
+    note: string | null;
+    created_at: string;
+    profiles:
+    | {
+        full_name: string | null;
+        email: string | null;
+    }
+    | {
+        full_name: string | null;
+        email: string | null;
+    }[]
+    | null;
+};
+
+
+
 type ActivityRow = {
     id: string;
     event_type: string;
@@ -83,37 +104,37 @@ export default async function AppointmentDetailPage({
     const { id } = await params;
     const supabase = await createClient();
 
-    const [{ data: appointment, error }, { data: logs }, { data: services }] = await Promise.all([
+    const [{ data: appointment, error }, { data: logs }, { data: services }, { data: statusHistory },] = await Promise.all([
         supabase
             .from("appointments")
             .select(
                 `
-      id,
-      customer_id,
-      lead_id,
-      service_id,
-      customer_name,
-      customer_phone,
-      customer_email,
-      appointment_date,
-      appointment_time,
-      status,
-      source,
-      notes,
-      created_at,
-      customers:customer_id (
-        id,
-        name,
-        phone,
-        email
-      ),
-      services:service_id (
-        id,
-        name,
-        price,
-        duration_minutes
-      )
-    `
+                id,
+                customer_id,
+                lead_id,
+                service_id,
+                customer_name,
+                customer_phone,
+                customer_email,
+                appointment_date,
+                appointment_time,
+                status,
+                source,
+                notes,
+                created_at,
+                customers:customer_id (
+                    id,
+                    name,
+                    phone,
+                    email
+                ),
+                services:service_id (
+                    id,
+                    name,
+                    price,
+                    duration_minutes
+                )
+                `
             )
             .eq("id", id)
             .maybeSingle(),
@@ -143,6 +164,24 @@ export default async function AppointmentDetailPage({
             .eq("is_active", true)
             .order("sort_order", { ascending: true })
             .order("created_at", { ascending: false }),
+
+        supabase
+            .from("appointment_status_history")
+            .select(
+                `
+                id,
+                old_status,
+                new_status,
+                note,
+                created_at,
+                profiles:changed_by (
+                full_name,
+                email
+                )
+            `
+            )
+            .eq("appointment_id", id)
+            .order("created_at", { ascending: false }),
     ]);
 
     if (error) throw new Error(error.message);
@@ -159,6 +198,7 @@ export default async function AppointmentDetailPage({
     };
     const activities = (logs ?? []) as ActivityRow[];
     const serviceOptions = (services ?? []) as { id: string; name: string }[];
+    const history = (statusHistory ?? []) as StatusHistoryRow[];
 
     return (
         <div className="p-4 md:p-6">
@@ -297,6 +337,38 @@ export default async function AppointmentDetailPage({
                         </form>
                     </CardContent>
                 </Card>
+
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Status History</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        {history.map((item) => (
+                            <div key={item.id} className="border-b pb-3 last:border-0 last:pb-0">
+                                <p className="text-sm font-medium capitalize">
+                                    {item.old_status ? `${item.old_status} → ${item.new_status}` : item.new_status}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {getActorName(item.profiles)} ·{" "}
+                                    {formatDistanceToNow(new Date(item.created_at), {
+                                        addSuffix: true,
+                                    })}
+                                </p>
+                                {item.note && (
+                                    <p className="mt-1 text-xs text-muted-foreground">{item.note}</p>
+                                )}
+                            </div>
+                        ))}
+
+                        {history.length === 0 && (
+                            <p className="text-sm text-muted-foreground">
+                                No status history recorded yet.
+                            </p>
+                        )}
+                    </CardContent>
+                </Card>
+
 
                 <Card>
                     <CardHeader>
