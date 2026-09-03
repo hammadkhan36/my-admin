@@ -181,7 +181,7 @@ export function getFriendlyActivityMessage(
             return `Appointment status changed${details?.status ? ` to ${String(details.status)}` : ""}.`;
 
         case "appointment.updated":
-            return "Appointment details were updated.";
+            return `Appointment details were updated${details?.date ? ` for ${String(details.date)}` : ""}.`;
 
         case "appointment.deleted":
             return "Appointment was deleted.";

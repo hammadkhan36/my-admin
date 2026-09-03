@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   deleteAppointment,
   updateAppointmentStatus,
+  updateAppointmentDetails,
 } from "@/app/(admin)/appointments/actions";
 
 type AppointmentDetail = {
@@ -80,60 +81,67 @@ export default async function AppointmentDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: appointment, error }, { data: logs }] = await Promise.all([
-    supabase
-      .from("appointments")
-      .select(
-        `
-        id,
-        customer_id,
-        lead_id,
-        service_id,
-        customer_name,
-        customer_phone,
-        customer_email,
-        appointment_date,
-        appointment_time,
-        status,
-        source,
-        notes,
-        created_at,
-        customers:customer_id (
-          id,
-          name,
-          phone,
-          email
-        ),
-        services:service_id (
-          id,
-          name,
-          price,
-          duration_minutes
-        )
+ const [{ data: appointment, error }, { data: logs }, { data: services }] = await Promise.all([
+  supabase
+    .from("appointments")
+    .select(
       `
+      id,
+      customer_id,
+      lead_id,
+      service_id,
+      customer_name,
+      customer_phone,
+      customer_email,
+      appointment_date,
+      appointment_time,
+      status,
+      source,
+      notes,
+      created_at,
+      customers:customer_id (
+        id,
+        name,
+        phone,
+        email
+      ),
+      services:service_id (
+        id,
+        name,
+        price,
+        duration_minutes
       )
-      .eq("id", id)
-      .maybeSingle(),
+    `
+    )
+    .eq("id", id)
+    .maybeSingle(),
 
-    supabase
-      .from("audit_logs")
-      .select(
-        `
-        id,
-        event_type,
-        details,
-        created_at,
-        profiles:actor_id (
-          full_name,
-          email
-        )
+  supabase
+    .from("audit_logs")
+    .select(
       `
+      id,
+      event_type,
+      details,
+      created_at,
+      profiles:actor_id (
+        full_name,
+        email
       )
-      .eq("target_type", "appointment")
-      .eq("target_id", id)
-      .order("created_at", { ascending: false })
-      .limit(20),
-  ]);
+    `
+    )
+    .eq("target_type", "appointment")
+    .eq("target_id", id)
+    .order("created_at", { ascending: false })
+    .limit(20),
+
+  supabase
+    .from("services")
+    .select("id, name")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: false }),
+]);
 
   if (error) throw new Error(error.message);
   if (!appointment) notFound();
@@ -148,6 +156,7 @@ export default async function AppointmentDetailPage({
       : appointment.services,
   };
   const activities = (logs ?? []) as ActivityRow[];
+  const serviceOptions = (services ?? []) as { id: string; name: string }[];
 
   return (
     <div className="p-4 md:p-6">
@@ -216,6 +225,70 @@ export default async function AppointmentDetailPage({
             </div>
           </CardContent>
         </Card>
+
+
+        <Card className="lg:col-span-2">
+  <CardHeader>
+    <CardTitle>Edit / Reschedule</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <form action={updateAppointmentDetails} className="grid gap-4 md:grid-cols-2">
+      <input type="hidden" name="id" value={item.id} />
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Date</label>
+        <input
+          name="appointment_date"
+          type="date"
+          defaultValue={item.appointment_date}
+          required
+          className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Time</label>
+        <input
+          name="appointment_time"
+          type="time"
+          defaultValue={item.appointment_time}
+          required
+          className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Service</label>
+        <select
+          name="service_id"
+          defaultValue={item.service_id ?? ""}
+          className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+        >
+          <option value="">No service</option>
+          {serviceOptions.map((service) => (
+            <option key={service.id} value={service.id}>
+              {service.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Notes</label>
+        <input
+          name="notes"
+          defaultValue={item.notes ?? ""}
+          placeholder="Appointment notes"
+          className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+        />
+      </div>
+
+      <div className="md:col-span-2">
+        <Button type="submit">Save Changes</Button>
+      </div>
+    </form>
+  </CardContent>
+</Card>
 
         <Card>
           <CardHeader>

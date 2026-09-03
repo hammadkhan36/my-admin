@@ -7,6 +7,7 @@ import { logActivity } from "@/lib/activity-log";
 import { createNotification } from "@/lib/notifications";
 import { checkAppointmentAvailability } from "@/lib/appointments/availability";
 
+
 async function getOrCreateCustomer(input: {
   name: string;
   phone: string;
@@ -50,7 +51,7 @@ export async function createAppointment(formData: FormData) {
   const customerEmail = String(formData.get("customer_email") || "").trim() || null;
   const serviceId = String(formData.get("service_id") || "") || null;
   const appointmentDate = String(formData.get("appointment_date") || "");
-  const appointmentTime = String(formData.get("appointment_time") || "");
+const appointmentTime = String(formData.get("appointment_time") || "").slice(0, 5);
   const notes = String(formData.get("notes") || "").trim() || null;
 
   if (!customerName || !customerPhone || !appointmentDate || !appointmentTime) {
@@ -148,6 +149,68 @@ export async function updateAppointmentStatus(formData: FormData) {
   });
 
   revalidatePath("/appointments");
+}
+
+export async function updateAppointmentDetails(formData: FormData) {
+  await requirePermission("appointments.update");
+  const profile = await requireProfile();
+  const supabase = await createClient();
+
+  const id = String(formData.get("id") || "");
+  const serviceId = String(formData.get("service_id") || "") || null;
+  const appointmentDate = String(formData.get("appointment_date") || "");
+  const appointmentTime = String(formData.get("appointment_time") || "").slice(0, 5);
+  const notes = String(formData.get("notes") || "").trim() || null;
+
+  if (!id || !appointmentDate || !appointmentTime) {
+    throw new Error("Appointment id, date and time are required.");
+  }
+
+  const availability = await checkAppointmentAvailability({
+    appointmentDate,
+    appointmentTime,
+    serviceId,
+    ignoreAppointmentId: id,
+  });
+
+  if (!availability.available) {
+    throw new Error(availability.reason || "Selected appointment time is not available.");
+  }
+
+  const { error } = await supabase
+    .from("appointments")
+    .update({
+      service_id: serviceId,
+      appointment_date: appointmentDate,
+      appointment_time: appointmentTime,
+      notes,
+    })
+    .eq("id", id);
+
+  if (error) throw new Error(error.message);
+
+  await logActivity({
+    actorId: profile.id,
+    eventType: "appointment.updated",
+    targetType: "appointment",
+    targetId: id,
+    details: {
+      date: appointmentDate,
+      time: appointmentTime,
+      service_id: serviceId,
+    },
+  });
+
+  await createNotification({
+    title: "Appointment updated",
+    message: `Appointment was rescheduled to ${appointmentDate} at ${appointmentTime}.`,
+    type: "info",
+    targetUrl: `/appointments/${id}`,
+    actorId: profile.id,
+  });
+
+  revalidatePath("/appointments");
+  revalidatePath(`/appointments/${id}`);
 }
 
 export async function deleteAppointment(formData: FormData) {
