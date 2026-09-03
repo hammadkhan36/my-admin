@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
     { data: serviceAreas, error: areasError },
     { data: faqs, error: faqsError },
     { data: testimonials, error: testimonialsError },
+    { data: mediaItems, error: mediaError },
   ] = await Promise.all([
     supabase
       .from("business_settings")
@@ -99,6 +100,15 @@ export async function GET(request: NextRequest) {
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false }),
 
+    supabase
+      .from("media_items")
+      .select(
+        "id, title, description, image_url, alt_text, category, is_featured, sort_order"
+      )
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false }),
+
 
   ]);
 
@@ -109,6 +119,7 @@ export async function GET(request: NextRequest) {
   if (areasError) return fail(areasError.message, 500);
   if (faqsError) return fail(faqsError.message, 500);
   if (testimonialsError) return fail(testimonialsError.message, 500);
+  if (mediaError) return fail(mediaError.message, 500);
 
   return ok({
     business: businessSettings,
@@ -117,5 +128,7 @@ export async function GET(request: NextRequest) {
     service_areas: serviceAreas ?? [],
     faqs: faqs ?? [],
     testimonials: testimonials ?? [],
+    media: mediaItems ?? [],
+    gallery: (mediaItems ?? []).filter((item) => item.category === "gallery"),
   });
 }
