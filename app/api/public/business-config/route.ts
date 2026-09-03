@@ -1,0 +1,98 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase-admin";
+
+function ok(data: Record<string, unknown> = {}) {
+  return NextResponse.json({
+    success: true,
+    ...data,
+  });
+}
+
+function fail(message: string, status = 400) {
+  return NextResponse.json(
+    {
+      success: false,
+      error: message,
+    },
+    { status }
+  );
+}
+
+export async function GET(request: NextRequest) {
+  const apiKey = request.headers.get("x-api-key");
+
+  if (
+    !process.env.WEBSITE_CONFIG_API_KEY ||
+    apiKey !== process.env.WEBSITE_CONFIG_API_KEY
+  ) {
+    return fail("Unauthorized request.", 401);
+  }
+
+  const supabase = createAdminClient();
+
+  const [
+    { data: businessSettings, error: businessError },
+    { data: services, error: servicesError },
+    { data: businessHours, error: hoursError },
+    { data: serviceAreas, error: areasError },
+  ] = await Promise.all([
+    supabase
+      .from("business_settings")
+      .select(
+        `
+        business_name,
+        short_name,
+        logo_url,
+        favicon_url,
+        theme_color,
+        contact_email,
+        contact_phone,
+        address,
+        social_links
+      `
+      )
+      .limit(1)
+      .maybeSingle(),
+
+    supabase
+      .from("services")
+      .select(
+        `
+        id,
+        name,
+        description,
+        price,
+        duration_minutes,
+        sort_order
+      `
+      )
+      .eq("is_active", true)
+      .eq("show_on_website", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false }),
+
+    supabase
+      .from("business_hours")
+      .select("day_of_week, day_name, opens_at, closes_at, is_closed, is_24h")
+      .order("day_of_week", { ascending: true }),
+
+    supabase
+      .from("service_areas")
+      .select("id, area_name, city, sort_order")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("area_name", { ascending: true }),
+  ]);
+
+  if (businessError) return fail(businessError.message, 500);
+  if (servicesError) return fail(servicesError.message, 500);
+  if (hoursError) return fail(hoursError.message, 500);
+  if (areasError) return fail(areasError.message, 500);
+
+  return ok({
+    business: businessSettings,
+    services: services ?? [],
+    business_hours: businessHours ?? [],
+    service_areas: serviceAreas ?? [],
+  });
+}
