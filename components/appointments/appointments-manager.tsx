@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { CalendarClock, Loader2, Trash2 } from "lucide-react";
+import { CalendarClock, Eye, Loader2, Trash2 } from "lucide-react";
+import Link from "next/link";
 import {
   createAppointment,
   deleteAppointment,
@@ -216,6 +217,14 @@ export function AppointmentsManager({
 
                 <form action={deleteAppointment}>
                   <input type="hidden" name="id" value={appointment.id} />
+
+                  <Link
+                    href={`/appointments/${appointment.id}`}
+                    className="inline-flex h-8 mr-2 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    View
+                  </Link>
                   <SubmitButton variant="destructive">
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete
