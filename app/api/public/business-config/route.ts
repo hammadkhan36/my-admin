@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
     { data: services, error: servicesError },
     { data: businessHours, error: hoursError },
     { data: serviceAreas, error: areasError },
+    { data: faqs, error: faqsError },
   ] = await Promise.all([
     supabase
       .from("business_settings")
@@ -82,17 +83,29 @@ export async function GET(request: NextRequest) {
       .eq("is_active", true)
       .order("sort_order", { ascending: true })
       .order("area_name", { ascending: true }),
+
+    supabase
+      .from("faqs")
+      .select("id, question, answer, sort_order")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false }),
+
+
   ]);
+
 
   if (businessError) return fail(businessError.message, 500);
   if (servicesError) return fail(servicesError.message, 500);
   if (hoursError) return fail(hoursError.message, 500);
   if (areasError) return fail(areasError.message, 500);
+  if (faqsError) return fail(faqsError.message, 500);
 
   return ok({
     business: businessSettings,
     services: services ?? [],
     business_hours: businessHours ?? [],
     service_areas: serviceAreas ?? [],
+    faqs: faqs ?? [],
   });
 }

@@ -37,6 +37,7 @@ export function getEventModule(eventType: string) {
     if (eventType.startsWith("service.")) return "Services";
     if (eventType.startsWith("appointment.")) return "Appointments";
     if (eventType.startsWith("report.")) return "Reports";
+    if (eventType.startsWith("faq.")) return "FAQs";
 
     return eventType.split(".")[0] || "System";
 }
@@ -195,6 +196,15 @@ export function getFriendlyActivityMessage(
 
         case "report.exported":
             return `Report exported${details?.type ? `: ${String(details.type)}` : ""}.`;
+
+        case "faq.created":
+            return `FAQ created${details?.question ? `: ${String(details.question)}` : ""}.`;
+
+        case "faq.updated":
+            return `FAQ updated${details?.question ? `: ${String(details.question)}` : ""}.`;
+
+        case "faq.deleted":
+            return `FAQ deleted${details?.question ? `: ${String(details.question)}` : ""}.`;
 
 
         default:
