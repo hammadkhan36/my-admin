@@ -24,27 +24,44 @@ export function formatEventType(eventType: string) {
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(" ");
 }
-
 export function getEventModule(eventType: string) {
-    return eventType.split(".")[0] || "system";
+    if (eventType.startsWith("member.")) return "Team";
+    if (eventType.startsWith("business_settings.")) return "Business";
+    if (eventType.startsWith("business_profile.")) return "Business";
+    if (eventType.startsWith("business_hours.")) return "Business";
+    if (eventType.startsWith("service_area.")) return "Business";
+    if (eventType.startsWith("feature_setting.")) return "Features";
+    if (eventType.startsWith("subscription.")) return "Subscription";
+    if (eventType.startsWith("customer.")) return "Customers";
+    if (eventType.startsWith("lead.")) return "Leads";
+    if (eventType.startsWith("service.")) return "Services";
+    if (eventType.startsWith("appointment.")) return "Appointments";
+
+    return eventType.split(".")[0] || "System";
 }
+
+
 
 export function getEventTone(eventType: string) {
     if (eventType.includes("deleted") || eventType.includes("removed")) {
         return "destructive";
     }
 
-    if (eventType.includes("created") || eventType.includes("activated")) {
+    if (
+        eventType.includes("created") ||
+        eventType.includes("activated") ||
+        eventType.includes("requested")
+    ) {
         return "success";
     }
 
-    if (eventType.includes("updated") || eventType.includes("changed")) {
+    if (
+        eventType.includes("updated") ||
+        eventType.includes("changed") ||
+        eventType.includes("deactivated")
+    ) {
         return "warning";
     }
-
-    if (eventType.startsWith("service.")) return "Services";
-
-    if (eventType.startsWith("appointment.")) return "Appointments";
 
     return "default";
 }
@@ -168,6 +185,9 @@ export function getFriendlyActivityMessage(
 
         case "appointment.deleted":
             return "Appointment was deleted.";
+
+        case "appointment.website_requested":
+            return `Website appointment requested${details?.customer_name ? ` by ${String(details.customer_name)}` : ""}.`;
 
         default:
             return formatEventType(eventType);
