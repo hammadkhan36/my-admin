@@ -1,164 +1,259 @@
-"use client";
+// "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Camera, Save, LogOut } from "lucide-react";
+// import { useState } from "react";
+// import { Button } from "@/components/ui/button";
+// import { Input } from "@/components/ui/input";
+// import { Label } from "@/components/ui/label";
+// import { Textarea } from "@/components/ui/textarea";
+// import { Switch } from "@/components/ui/switch";
+// import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// import { Camera, Save, LogOut } from "lucide-react";
 
-export default function ProfilePage() {
-  const [profile, setProfile] = useState({
-    name: "Hammad",
-    email: "hammad@acme.com",
-    phone: "+92 300 1234567",
-    bio: "Admin at Acme Inc.",
-    avatar: "",
-  });
+// export default function ProfilePage() {
+//   const [profile, setProfile] = useState({
+//     name: "Hammad",
+//     email: "hammad@acme.com",
+//     phone: "+92 300 1234567",
+//     bio: "Admin at Acme Inc.",
+//     avatar: "",
+//   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setProfile({ ...profile, [e.target.name]: e.target.value });
-  };
+//   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+//     setProfile({ ...profile, [e.target.name]: e.target.value });
+//   };
+
+//   return (
+//     <div className="p-4 md:p-6 max-w-4xl mx-auto">
+//       <h1 className="text-2xl font-bold mb-6">My Profile</h1>
+
+//       <Tabs defaultValue="profile" className="w-full">
+//         <TabsList className="mb-6">
+//           <TabsTrigger value="profile">Profile</TabsTrigger>
+//           <TabsTrigger value="account">Account</TabsTrigger>
+//           <TabsTrigger value="preferences">Preferences</TabsTrigger>
+//           <TabsTrigger value="password">Change Password</TabsTrigger>
+//         </TabsList>
+
+//         {/* Profile Tab */}
+//         <TabsContent value="profile">
+//           <Card>
+//             <CardHeader>
+//               <CardTitle>Profile Information</CardTitle>
+//               <CardDescription>Update your personal details</CardDescription>
+//             </CardHeader>
+//             <CardContent className="space-y-4">
+//               <div className="flex items-center gap-4">
+//                 <Avatar className="h-20 w-20">
+//                   <AvatarImage src={profile.avatar} />
+//                   <AvatarFallback>{profile.name.charAt(0)}</AvatarFallback>
+//                 </Avatar>
+//                 <Button variant="outline" size="sm">
+//                   <Camera className="mr-2 h-4 w-4" /> Change Photo
+//                 </Button>
+//               </div>
+//               <div>
+//                 <Label>Name</Label>
+//                 <Input name="name" value={profile.name} onChange={handleChange} />
+//               </div>
+//               <div>
+//                 <Label>Email</Label>
+//                 <Input name="email" value={profile.email} onChange={handleChange} />
+//               </div>
+//               <div>
+//                 <Label>Phone</Label>
+//                 <Input name="phone" value={profile.phone} onChange={handleChange} />
+//               </div>
+//               <div>
+//                 <Label>Bio</Label>
+//                 <Textarea name="bio" value={profile.bio} onChange={handleChange} />
+//               </div>
+//               <Button>
+//                 <Save className="mr-2 h-4 w-4" /> Save Profile
+//               </Button>
+//             </CardContent>
+//           </Card>
+//         </TabsContent>
+
+//         {/* Account Tab */}
+//         <TabsContent value="account">
+//           <Card>
+//             <CardHeader>
+//               <CardTitle>Account Settings</CardTitle>
+//               <CardDescription>Manage your account preferences</CardDescription>
+//             </CardHeader>
+//             <CardContent className="space-y-4">
+//               <div className="flex items-center justify-between">
+//                 <div>
+//                   <p className="font-medium">Two-Factor Authentication</p>
+//                   <p className="text-sm text-muted-foreground">Add extra security to your account</p>
+//                 </div>
+//                 <Switch />
+//               </div>
+//               <div className="flex items-center justify-between">
+//                 <div>
+//                   <p className="font-medium">Email Notifications</p>
+//                   <p className="text-sm text-muted-foreground">Receive account-related emails</p>
+//                 </div>
+//                 <Switch defaultChecked />
+//               </div>
+//             </CardContent>
+//           </Card>
+//         </TabsContent>
+
+//         {/* Preferences Tab */}
+//         <TabsContent value="preferences">
+//           <Card>
+//             <CardHeader>
+//               <CardTitle>Preferences</CardTitle>
+//               <CardDescription>Customize your experience</CardDescription>
+//             </CardHeader>
+//             <CardContent className="space-y-4">
+//               <div>
+//                 <Label>Language</Label>
+//                 <select className="w-full border rounded-md px-3 py-2">
+//                   <option>English</option>
+//                   <option>Urdu</option>
+//                 </select>
+//               </div>
+//               <div className="flex items-center justify-between">
+//                 <div>
+//                   <p className="font-medium">Dark Mode</p>
+//                   <p className="text-sm text-muted-foreground">Use dark theme by default</p>
+//                 </div>
+//                 <Switch />
+//               </div>
+//             </CardContent>
+//           </Card>
+//         </TabsContent>
+
+//         {/* Change Password Tab */}
+//         <TabsContent value="password">
+//           <Card>
+//             <CardHeader>
+//               <CardTitle>Change Password</CardTitle>
+//               <CardDescription>Update your password regularly</CardDescription>
+//             </CardHeader>
+//             <CardContent className="space-y-4">
+//               <div>
+//                 <Label>Current Password</Label>
+//                 <Input type="password" />
+//               </div>
+//               <div>
+//                 <Label>New Password</Label>
+//                 <Input type="password" />
+//               </div>
+//               <div>
+//                 <Label>Confirm New Password</Label>
+//                 <Input type="password" />
+//               </div>
+//               <Button>Update Password</Button>
+//             </CardContent>
+//           </Card>
+//         </TabsContent>
+//       </Tabs>
+
+//       {/* Logout Button */}
+//       <div className="mt-6 flex justify-end">
+//         <Button variant="outline" className="text-red-500">
+//           <LogOut className="mr-2 h-4 w-4" /> Logout
+//         </Button>
+//       </div>
+//     </div>
+//   );
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import { Mail, ShieldCheck, User } from "lucide-react";
+import { requireProfile } from "@/lib/auth/server";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+export default async function ProfilePage() {
+  const profile = await requireProfile();
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">My Profile</h1>
+    <div className="p-4 md:p-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Profile</h1>
+        <p className="text-sm text-muted-foreground">
+          Your account information and dashboard access role.
+        </p>
+      </div>
 
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="account">Account</TabsTrigger>
-          <TabsTrigger value="preferences">Preferences</TabsTrigger>
-          <TabsTrigger value="password">Change Password</TabsTrigger>
-        </TabsList>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <User className="h-4 w-4" />
+              Account
+            </CardTitle>
+          </CardHeader>
 
-        {/* Profile Tab */}
-        <TabsContent value="profile">
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>Update your personal details</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={profile.avatar} />
-                  <AvatarFallback>{profile.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <Button variant="outline" size="sm">
-                  <Camera className="mr-2 h-4 w-4" /> Change Photo
-                </Button>
-              </div>
-              <div>
-                <Label>Name</Label>
-                <Input name="name" value={profile.name} onChange={handleChange} />
-              </div>
-              <div>
-                <Label>Email</Label>
-                <Input name="email" value={profile.email} onChange={handleChange} />
-              </div>
-              <div>
-                <Label>Phone</Label>
-                <Input name="phone" value={profile.phone} onChange={handleChange} />
-              </div>
-              <div>
-                <Label>Bio</Label>
-                <Textarea name="bio" value={profile.bio} onChange={handleChange} />
-              </div>
-              <Button>
-                <Save className="mr-2 h-4 w-4" /> Save Profile
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Full Name</p>
+              <p className="font-medium">{profile.full_name || "Not set"}</p>
+            </div>
 
-        {/* Account Tab */}
-        <TabsContent value="account">
-          <Card>
-            <CardHeader>
-              <CardTitle>Account Settings</CardTitle>
-              <CardDescription>Manage your account preferences</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Two-Factor Authentication</p>
-                  <p className="text-sm text-muted-foreground">Add extra security to your account</p>
-                </div>
-                <Switch />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Email Notifications</p>
-                  <p className="text-sm text-muted-foreground">Receive account-related emails</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            <div>
+              <p className="text-sm text-muted-foreground">Email</p>
+              <p className="flex items-center gap-2 font-medium">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                {profile.email}
+              </p>
+            </div>
 
-        {/* Preferences Tab */}
-        <TabsContent value="preferences">
-          <Card>
-            <CardHeader>
-              <CardTitle>Preferences</CardTitle>
-              <CardDescription>Customize your experience</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Language</Label>
-                <select className="w-full border rounded-md px-3 py-2">
-                  <option>English</option>
-                  <option>Urdu</option>
-                </select>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Dark Mode</p>
-                  <p className="text-sm text-muted-foreground">Use dark theme by default</p>
-                </div>
-                <Switch />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            <div>
+              <p className="text-sm text-muted-foreground">Status</p>
+              <Badge variant={profile.is_active ? "default" : "destructive"}>
+                {profile.is_active ? "Active" : "Inactive"}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Change Password Tab */}
-        <TabsContent value="password">
-          <Card>
-            <CardHeader>
-              <CardTitle>Change Password</CardTitle>
-              <CardDescription>Update your password regularly</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Current Password</Label>
-                <Input type="password" />
-              </div>
-              <div>
-                <Label>New Password</Label>
-                <Input type="password" />
-              </div>
-              <div>
-                <Label>Confirm New Password</Label>
-                <Input type="password" />
-              </div>
-              <Button>Update Password</Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ShieldCheck className="h-4 w-4" />
+              Role
+            </CardTitle>
+          </CardHeader>
 
-      {/* Logout Button */}
-      <div className="mt-6 flex justify-end">
-        <Button variant="outline" className="text-red-500">
-          <LogOut className="mr-2 h-4 w-4" /> Logout
-        </Button>
+          <CardContent className="space-y-3">
+            <Badge className="capitalize">{profile.role}</Badge>
+
+            <p className="text-sm text-muted-foreground">
+              Your role controls which dashboard modules and actions you can access.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Account Rules</CardTitle>
+          </CardHeader>
+
+          <CardContent className="space-y-2 text-sm text-muted-foreground">
+            <p>Password changes are managed by owner/admin from Staff page.</p>
+            <p>Permission access is managed from Roles & Permissions page.</p>
+            <p>Superadmin and owner accounts are created manually in Supabase.</p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
