@@ -2,10 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { CalendarClock, Eye, Loader2, Trash2 } from "lucide-react";
+import {  Eye, Loader2, Trash2 } from "lucide-react";
 import Link from "next/link";
 import {
-  createAppointment,
   deleteAppointment,
   updateAppointmentStatus,
 } from "@/app/(admin)/appointments/actions";
@@ -13,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+// import { Label } from "@/components/ui/label";
+import { AppointmentCreateForm } from "@/components/appointments/appointment-create-form";
 
 type ServiceOption = {
   id: string;
@@ -106,7 +106,7 @@ export function AppointmentsManager({
         </Card>
       </div>
 
-      <Card className="mb-6">
+      {/* <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <CalendarClock className="h-4 w-4" />
@@ -166,7 +166,9 @@ export function AppointmentsManager({
             </div>
           </form>
         </CardContent>
-      </Card>
+      </Card> */}
+      <AppointmentCreateForm services={services} />
+
 
       <div className="mb-4">
         <Input

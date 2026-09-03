@@ -129,6 +129,24 @@ if (!availability.available) {
   revalidatePath("/crm/customers");
 }
 
+export async function createAppointmentSafe(
+  _prevState: AppointmentActionState,
+  formData: FormData
+): Promise<AppointmentActionState> {
+  try {
+    await createAppointment(formData);
+    return success("Appointment created successfully.");
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Appointment could not be created.";
+
+    return failure(message);
+  }
+}
+
+
 export async function updateAppointmentStatus(formData: FormData) {
   await requirePermission("appointments.update");
   const profile = await requireProfile();
