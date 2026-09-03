@@ -36,6 +36,7 @@ export function getEventModule(eventType: string) {
     if (eventType.startsWith("lead.")) return "Leads";
     if (eventType.startsWith("service.")) return "Services";
     if (eventType.startsWith("appointment.")) return "Appointments";
+    if (eventType.startsWith("report.")) return "Reports";
 
     return eventType.split(".")[0] || "System";
 }
@@ -191,6 +192,10 @@ export function getFriendlyActivityMessage(
 
         case "appointment.website_requested":
             return `Website appointment requested${details?.customer_name ? ` by ${String(details.customer_name)}` : ""}.`;
+
+        case "report.exported":
+            return `Report exported${details?.type ? `: ${String(details.type)}` : ""}.`;
+
 
         default:
             return formatEventType(eventType);
