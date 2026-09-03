@@ -41,7 +41,7 @@ export function getEventModule(eventType: string) {
     if (eventType.startsWith("testimonial.")) return "Testimonials";
     if (eventType.startsWith("media.")) return "Media";
     if (eventType.startsWith("offer.")) return "Offers";
-
+    if (eventType.startsWith("coupon.")) return "Coupons";
     return eventType.split(".")[0] || "System";
 }
 
@@ -235,6 +235,15 @@ export function getFriendlyActivityMessage(
 
         case "offer.deleted":
             return `Offer deleted${details?.title ? `: ${String(details.title)}` : ""}.`;
+
+        case "coupon.created":
+            return `Coupon created${details?.code ? `: ${String(details.code)}` : ""}.`;
+
+        case "coupon.updated":
+            return `Coupon updated${details?.code ? `: ${String(details.code)}` : ""}.`;
+
+        case "coupon.deleted":
+            return `Coupon deleted${details?.code ? `: ${String(details.code)}` : ""}.`;
 
 
         default:
