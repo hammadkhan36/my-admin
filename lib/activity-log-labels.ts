@@ -40,6 +40,7 @@ export function getEventModule(eventType: string) {
     if (eventType.startsWith("faq.")) return "FAQs";
     if (eventType.startsWith("testimonial.")) return "Testimonials";
     if (eventType.startsWith("media.")) return "Media";
+    if (eventType.startsWith("offer.")) return "Offers";
 
     return eventType.split(".")[0] || "System";
 }
@@ -225,6 +226,15 @@ export function getFriendlyActivityMessage(
 
         case "media.deleted":
             return `Media item deleted${details?.title ? `: ${String(details.title)}` : ""}.`;
+
+        case "offer.created":
+            return `Offer created${details?.title ? `: ${String(details.title)}` : ""}.`;
+
+        case "offer.updated":
+            return `Offer updated${details?.title ? `: ${String(details.title)}` : ""}.`;
+
+        case "offer.deleted":
+            return `Offer deleted${details?.title ? `: ${String(details.title)}` : ""}.`;
 
 
         default:

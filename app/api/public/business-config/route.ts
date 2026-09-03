@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
     { data: faqs, error: faqsError },
     { data: testimonials, error: testimonialsError },
     { data: mediaItems, error: mediaError },
+    { data: offers, error: offersError },
   ] = await Promise.all([
     supabase
       .from("business_settings")
@@ -109,6 +110,16 @@ export async function GET(request: NextRequest) {
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false }),
 
+    supabase
+      .from("offers")
+      .select(
+        "id, title, description, discount_label, starts_at, ends_at, cta_label, cta_url, image_url, sort_order"
+      )
+      .eq("is_active", true)
+      .or(`starts_at.is.null,starts_at.lte.${new Date().toISOString().slice(0, 10)}`)
+      .or(`ends_at.is.null,ends_at.gte.${new Date().toISOString().slice(0, 10)}`)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false }),
 
   ]);
 
@@ -120,6 +131,7 @@ export async function GET(request: NextRequest) {
   if (faqsError) return fail(faqsError.message, 500);
   if (testimonialsError) return fail(testimonialsError.message, 500);
   if (mediaError) return fail(mediaError.message, 500);
+  if (offersError) return fail(offersError.message, 500);
 
   return ok({
     business: businessSettings,
@@ -130,5 +142,6 @@ export async function GET(request: NextRequest) {
     testimonials: testimonials ?? [],
     media: mediaItems ?? [],
     gallery: (mediaItems ?? []).filter((item) => item.category === "gallery"),
+    offers: offers ?? [],
   });
 }
