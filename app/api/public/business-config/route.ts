@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
     { data: offers, error: offersError },
     { data: reviews, error: reviewsError },
     { data: forms, error: formsError },
+    { data: pages, error: pagesError },
   ] = await Promise.all([
     supabase
       .from("business_settings")
@@ -138,6 +139,37 @@ export async function GET(request: NextRequest) {
       .eq("is_active", true)
       .order("created_at", { ascending: false }),
 
+      supabase
+  .from("website_pages")
+  .select(
+    `
+    id,
+    slug,
+    title,
+    meta_title,
+    meta_description,
+    website_content_blocks (
+      id,
+      block_key,
+      block_type,
+      title,
+      subtitle,
+      body,
+      image_url,
+      cta_label,
+      cta_url,
+      sort_order
+    )
+  `
+  )
+  .eq("is_active", true)
+  .eq("website_content_blocks.is_active", true)
+  .order("created_at", { ascending: false })
+  .order("sort_order", {
+    foreignTable: "website_content_blocks",
+    ascending: true,
+  }),
+
   ]);
 
 
@@ -151,6 +183,8 @@ export async function GET(request: NextRequest) {
   if (offersError) return fail(offersError.message, 500);
   if (reviewsError) return fail(reviewsError.message, 500);
   if (formsError) return fail(formsError.message, 500);
+  if (pagesError) return fail(pagesError.message, 500);
+
 
   return ok({
     business: businessSettings,
@@ -164,5 +198,6 @@ export async function GET(request: NextRequest) {
     offers: offers ?? [],
     reviews: reviews ?? [],
     forms: forms ?? [],
+    pages: pages ?? [],
   });
 }

@@ -24,6 +24,7 @@ export function formatEventType(eventType: string) {
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(" ");
 }
+
 export function getEventModule(eventType: string) {
     if (eventType.startsWith("member.")) return "Team";
     if (eventType.startsWith("business_settings.")) return "Business";
@@ -44,6 +45,12 @@ export function getEventModule(eventType: string) {
     if (eventType.startsWith("coupon.")) return "Coupons";
     if (eventType.startsWith("review.")) return "Reviews";
     if (eventType.startsWith("form.")) return "Forms";
+    if (
+        eventType.startsWith("website_page.") ||
+        eventType.startsWith("content_block.")
+    ) {
+        return "Website Pages";
+    }
     return eventType.split(".")[0] || "System";
 }
 
@@ -276,6 +283,24 @@ export function getFriendlyActivityMessage(
 
         case "form.submission_deleted":
             return `Form submission deleted${details?.form_slug ? ` from ${String(details.form_slug)}` : ""}.`;
+
+        case "website_page.created":
+            return `Website page created${details?.title ? `: ${String(details.title)}` : ""}.`;
+
+        case "website_page.updated":
+            return `Website page updated${details?.title ? `: ${String(details.title)}` : ""}.`;
+
+        case "website_page.deleted":
+            return `Website page deleted${details?.title ? `: ${String(details.title)}` : ""}.`;
+
+        case "content_block.created":
+            return `Content block created${details?.block_key ? `: ${String(details.block_key)}` : ""}.`;
+
+        case "content_block.updated":
+            return `Content block updated${details?.block_key ? `: ${String(details.block_key)}` : ""}.`;
+
+        case "content_block.deleted":
+            return `Content block deleted${details?.block_key ? `: ${String(details.block_key)}` : ""}.`;
 
         default:
             return formatEventType(eventType);
