@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache";
 import { requirePermission, requireProfile } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase-server";
 import { logActivity } from "@/lib/activity-log";
+import {
+  actionFailure,
+  actionSuccess,
+  getErrorMessage,
+  type ActionState,
+} from "@/lib/action-state";
 
 function textOrNull(value: FormDataEntryValue | null) {
   const text = String(value || "").trim();
@@ -255,4 +261,79 @@ export async function deleteContentBlock(formData: FormData) {
   });
 
   revalidatePath("/website/pages");
+}
+
+
+
+
+export async function createWebsitePageSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await createWebsitePage(formData);
+    return actionSuccess("Website page created successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Website page could not be created."));
+  }
+}
+
+export async function updateWebsitePageSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await updateWebsitePage(formData);
+    return actionSuccess("Website page updated successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Website page could not be updated."));
+  }
+}
+
+export async function deleteWebsitePageSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await deleteWebsitePage(formData);
+    return actionSuccess("Website page deleted successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Website page could not be deleted."));
+  }
+}
+
+export async function createContentBlockSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await createContentBlock(formData);
+    return actionSuccess("Content block created successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Content block could not be created."));
+  }
+}
+
+export async function updateContentBlockSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await updateContentBlock(formData);
+    return actionSuccess("Content block updated successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Content block could not be updated."));
+  }
+}
+
+export async function deleteContentBlockSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await deleteContentBlock(formData);
+    return actionSuccess("Content block deleted successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Content block could not be deleted."));
+  }
 }

@@ -3,20 +3,33 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { FileText, Layers, Loader2, Pencil, Trash2 } from "lucide-react";
-import {
-  createContentBlock,
-  createWebsitePage,
-  deleteContentBlock,
-  deleteWebsitePage,
-  updateContentBlock,
-  updateWebsitePage,
-} from "@/app/(admin)/website/pages/actions";
+// import {
+//   createContentBlock,
+//   createWebsitePage,
+//   deleteContentBlock,
+//   deleteWebsitePage,
+//   updateContentBlock,
+//   updateWebsitePage,
+// } from "@/app/(admin)/website/pages/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import {
+  ContentBlockCreateForm,
+  ContentBlockEditForm,
+  WebsitePageCreateForm,
+  WebsitePageEditForm,
+} from "@/components/website/page-editor-forms";
+import {
+  deleteContentBlockSafe,
+  deleteWebsitePageSafe,
+} from "@/app/(admin)/website/pages/actions";
+import { AppointmentActionForm } from "@/components/appointments/appointment-action-form";
+
+
 
 export type ContentBlockRow = {
   id: string;
@@ -116,7 +129,7 @@ export function PagesManager({ pages }: { pages: WebsitePageRow[] }) {
         </CardHeader>
 
         <CardContent>
-          <form action={createWebsitePage} className="grid gap-4 md:grid-cols-2">
+          {/* <form action={createWebsitePage} className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Title</Label>
               <Input name="title" placeholder="About Us" required />
@@ -140,7 +153,8 @@ export function PagesManager({ pages }: { pages: WebsitePageRow[] }) {
             <div className="md:col-span-2">
               <SubmitButton>Create Page</SubmitButton>
             </div>
-          </form>
+          </form> */}
+          <WebsitePageCreateForm />
         </CardContent>
       </Card>
 
@@ -163,52 +177,53 @@ export function PagesManager({ pages }: { pages: WebsitePageRow[] }) {
 
               <CardContent className="space-y-6">
                 {isEditingPage ? (
-                  <form action={updateWebsitePage} className="grid gap-4 md:grid-cols-2">
-                    <input type="hidden" name="id" value={page.id} />
+                  // <form action={updateWebsitePage} className="grid gap-4 md:grid-cols-2">
+                  //   <input type="hidden" name="id" value={page.id} />
 
-                    <div className="space-y-2">
-                      <Label>Title</Label>
-                      <Input name="title" defaultValue={page.title} required />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Title</Label>
+                  //     <Input name="title" defaultValue={page.title} required />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>Slug</Label>
-                      <Input name="slug" defaultValue={page.slug} required />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Slug</Label>
+                  //     <Input name="slug" defaultValue={page.slug} required />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>Meta Title</Label>
-                      <Input name="meta_title" defaultValue={page.meta_title ?? ""} />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Meta Title</Label>
+                  //     <Input name="meta_title" defaultValue={page.meta_title ?? ""} />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>Meta Description</Label>
-                      <Input
-                        name="meta_description"
-                        defaultValue={page.meta_description ?? ""}
-                      />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Meta Description</Label>
+                  //     <Input
+                  //       name="meta_description"
+                  //       defaultValue={page.meta_description ?? ""}
+                  //     />
+                  //   </div>
 
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        name="is_active"
-                        defaultChecked={page.is_active}
-                      />
-                      Active
-                    </label>
+                  //   <label className="flex items-center gap-2 text-sm">
+                  //     <input
+                  //       type="checkbox"
+                  //       name="is_active"
+                  //       defaultChecked={page.is_active}
+                  //     />
+                  //     Active
+                  //   </label>
 
-                    <div className="flex gap-2 md:col-span-2">
-                      <SubmitButton>Save Page</SubmitButton>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setEditingPageId(null)}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </form>
+                  //   <div className="flex gap-2 md:col-span-2">
+                  //     <SubmitButton>Save Page</SubmitButton>
+                  //     <Button
+                  //       type="button"
+                  //       variant="outline"
+                  //       onClick={() => setEditingPageId(null)}
+                  //     >
+                  //       Cancel
+                  //     </Button>
+                  //   </div>
+                  // </form>
+                  <WebsitePageEditForm page={page} onCancel={() => setEditingPageId(null)} />
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     <Button
@@ -220,14 +235,25 @@ export function PagesManager({ pages }: { pages: WebsitePageRow[] }) {
                       Edit Page
                     </Button>
 
-                    <form action={deleteWebsitePage}>
+                    {/* <form action={deleteWebsitePage}>
                       <input type="hidden" name="id" value={page.id} />
                       <input type="hidden" name="title" value={page.title} />
                        <ConfirmSubmitButton message="Delete this item?">
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete Page
                       </ConfirmSubmitButton>
-                    </form>
+                    </form> */}
+                    <AppointmentActionForm
+                      action={deleteWebsitePageSafe}
+                      fields={{
+                        id: page.id,
+                        title: page.title,
+                      }}
+                      variant="destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Page
+                    </AppointmentActionForm>
                   </div>
                 )}
 
@@ -237,7 +263,7 @@ export function PagesManager({ pages }: { pages: WebsitePageRow[] }) {
                     Add Content Block
                   </h3>
 
-                  <form action={createContentBlock} className="grid gap-4 md:grid-cols-2">
+                  {/* <form action={createContentBlock} className="grid gap-4 md:grid-cols-2">
                     <input type="hidden" name="page_id" value={page.id} />
 
                     <div className="space-y-2">
@@ -302,7 +328,8 @@ export function PagesManager({ pages }: { pages: WebsitePageRow[] }) {
                     <div className="md:col-span-2">
                       <SubmitButton>Add Block</SubmitButton>
                     </div>
-                  </form>
+                  </form> */}
+                  <ContentBlockCreateForm pageId={page.id} />
                 </div>
 
                 <div className="grid gap-3">
@@ -313,111 +340,112 @@ export function PagesManager({ pages }: { pages: WebsitePageRow[] }) {
                       <Card key={block.id}>
                         <CardContent className="p-4">
                           {isEditingBlock ? (
-                            <form
-                              action={updateContentBlock}
-                              className="grid gap-4 md:grid-cols-2"
-                            >
-                              <input type="hidden" name="id" value={block.id} />
+                            // <form
+                            //   action={updateContentBlock}
+                            //   className="grid gap-4 md:grid-cols-2"
+                            // >
+                            //   <input type="hidden" name="id" value={block.id} />
 
-                              <div className="space-y-2">
-                                <Label>Block Key</Label>
-                                <Input
-                                  name="block_key"
-                                  defaultValue={block.block_key}
-                                  required
-                                />
-                              </div>
+                            //   <div className="space-y-2">
+                            //     <Label>Block Key</Label>
+                            //     <Input
+                            //       name="block_key"
+                            //       defaultValue={block.block_key}
+                            //       required
+                            //     />
+                            //   </div>
 
-                              <div className="space-y-2">
-                                <Label>Block Type</Label>
-                                <select
-                                  name="block_type"
-                                  defaultValue={block.block_type}
-                                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                                >
-                                  <option value="hero">Hero</option>
-                                  <option value="text">Text</option>
-                                  <option value="cta">CTA</option>
-                                  <option value="image">Image</option>
-                                  <option value="rich_text">Rich Text</option>
-                                </select>
-                              </div>
+                            //   <div className="space-y-2">
+                            //     <Label>Block Type</Label>
+                            //     <select
+                            //       name="block_type"
+                            //       defaultValue={block.block_type}
+                            //       className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                            //     >
+                            //       <option value="hero">Hero</option>
+                            //       <option value="text">Text</option>
+                            //       <option value="cta">CTA</option>
+                            //       <option value="image">Image</option>
+                            //       <option value="rich_text">Rich Text</option>
+                            //     </select>
+                            //   </div>
 
-                              <div className="space-y-2">
-                                <Label>Title</Label>
-                                <Input name="title" defaultValue={block.title ?? ""} />
-                              </div>
+                            //   <div className="space-y-2">
+                            //     <Label>Title</Label>
+                            //     <Input name="title" defaultValue={block.title ?? ""} />
+                            //   </div>
 
-                              <div className="space-y-2">
-                                <Label>Subtitle</Label>
-                                <Input
-                                  name="subtitle"
-                                  defaultValue={block.subtitle ?? ""}
-                                />
-                              </div>
+                            //   <div className="space-y-2">
+                            //     <Label>Subtitle</Label>
+                            //     <Input
+                            //       name="subtitle"
+                            //       defaultValue={block.subtitle ?? ""}
+                            //     />
+                            //   </div>
 
-                              <div className="space-y-2 md:col-span-2">
-                                <Label>Body</Label>
-                                <textarea
-                                  name="body"
-                                  defaultValue={block.body ?? ""}
-                                  className="min-h-20 w-full rounded-md border bg-background px-3 py-2 text-sm"
-                                />
-                              </div>
+                            //   <div className="space-y-2 md:col-span-2">
+                            //     <Label>Body</Label>
+                            //     <textarea
+                            //       name="body"
+                            //       defaultValue={block.body ?? ""}
+                            //       className="min-h-20 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                            //     />
+                            //   </div>
 
-                              <div className="space-y-2">
-                                <Label>Image URL</Label>
-                                <Input
-                                  name="image_url"
-                                  defaultValue={block.image_url ?? ""}
-                                />
-                              </div>
+                            //   <div className="space-y-2">
+                            //     <Label>Image URL</Label>
+                            //     <Input
+                            //       name="image_url"
+                            //       defaultValue={block.image_url ?? ""}
+                            //     />
+                            //   </div>
 
-                              <div className="space-y-2">
-                                <Label>Sort Order</Label>
-                                <Input
-                                  name="sort_order"
-                                  type="number"
-                                  defaultValue={block.sort_order}
-                                />
-                              </div>
+                            //   <div className="space-y-2">
+                            //     <Label>Sort Order</Label>
+                            //     <Input
+                            //       name="sort_order"
+                            //       type="number"
+                            //       defaultValue={block.sort_order}
+                            //     />
+                            //   </div>
 
-                              <div className="space-y-2">
-                                <Label>CTA Label</Label>
-                                <Input
-                                  name="cta_label"
-                                  defaultValue={block.cta_label ?? ""}
-                                />
-                              </div>
+                            //   <div className="space-y-2">
+                            //     <Label>CTA Label</Label>
+                            //     <Input
+                            //       name="cta_label"
+                            //       defaultValue={block.cta_label ?? ""}
+                            //     />
+                            //   </div>
 
-                              <div className="space-y-2">
-                                <Label>CTA URL</Label>
-                                <Input
-                                  name="cta_url"
-                                  defaultValue={block.cta_url ?? ""}
-                                />
-                              </div>
+                            //   <div className="space-y-2">
+                            //     <Label>CTA URL</Label>
+                            //     <Input
+                            //       name="cta_url"
+                            //       defaultValue={block.cta_url ?? ""}
+                            //     />
+                            //   </div>
 
-                              <label className="flex items-center gap-2 text-sm">
-                                <input
-                                  type="checkbox"
-                                  name="is_active"
-                                  defaultChecked={block.is_active}
-                                />
-                                Active
-                              </label>
+                            //   <label className="flex items-center gap-2 text-sm">
+                            //     <input
+                            //       type="checkbox"
+                            //       name="is_active"
+                            //       defaultChecked={block.is_active}
+                            //     />
+                            //     Active
+                            //   </label>
 
-                              <div className="flex gap-2 md:col-span-2">
-                                <SubmitButton>Save Block</SubmitButton>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  onClick={() => setEditingBlockId(null)}
-                                >
-                                  Cancel
-                                </Button>
-                              </div>
-                            </form>
+                            //   <div className="flex gap-2 md:col-span-2">
+                            //     <SubmitButton>Save Block</SubmitButton>
+                            //     <Button
+                            //       type="button"
+                            //       variant="outline"
+                            //       onClick={() => setEditingBlockId(null)}
+                            //     >
+                            //       Cancel
+                            //     </Button>
+                            //   </div>
+                            // </form>
+                            <ContentBlockEditForm block={block} onCancel={() => setEditingBlockId(null)} />
                           ) : (
                             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                               <div>
@@ -459,7 +487,7 @@ export function PagesManager({ pages }: { pages: WebsitePageRow[] }) {
                                   Edit
                                 </Button>
 
-                                <form action={deleteContentBlock}>
+                                {/* <form action={deleteContentBlock}>
                                   <input type="hidden" name="id" value={block.id} />
                                   <input
                                     type="hidden"
@@ -470,7 +498,18 @@ export function PagesManager({ pages }: { pages: WebsitePageRow[] }) {
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     Delete
                                   </ConfirmSubmitButton>
-                                </form>
+                                </form> */}
+                                <AppointmentActionForm
+                                  action={deleteContentBlockSafe}
+                                  fields={{
+                                    id: block.id,
+                                    block_key: block.block_key,
+                                  }}
+                                  variant="destructive"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </AppointmentActionForm>
                               </div>
                             </div>
                           )}
