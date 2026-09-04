@@ -111,11 +111,21 @@ Example:
 
 ADMIN_API_URL=https://admin.abc-bakery.com
 Public APIs
-API	Method	Purpose
-/api/public/business-config	GET	Fetch business profile, services, hours and service areas
-/api/public/leads	POST	Submit website lead
-/api/public/appointments	POST	Submit appointment request
-/api/public/appointments/slots	GET	Fetch available appointment slots
+| API | Method | Purpose |
+|---|---|---|
+| `/api/public/business-config` | GET | Fetch complete website config and content |
+| `/api/public/pages` | GET | Fetch active website pages and content blocks |
+| `/api/public/forms` | GET | Fetch active custom forms |
+| `/api/public/forms/submit` | POST | Submit custom form entry |
+| `/api/public/leads` | POST | Submit website lead |
+| `/api/public/appointments` | POST | Submit appointment request |
+| `/api/public/appointments/slots` | GET | Fetch available appointment slots |
+| `/api/public/reviews` | POST | Submit customer review |
+| `/api/public/coupons/validate` | POST | Validate coupon code |
+| `/api/public/coupons/redeem` | POST | Redeem coupon code |
+
+
+
 API Headers
 
 Every public API request must send an API key.
@@ -131,6 +141,8 @@ Business config	WEBSITE_CONFIG_API_KEY
 Leads	WEBSITE_LEAD_API_KEY
 Appointments	WEBSITE_APPOINTMENT_API_KEY
 Appointment slots	WEBSITE_APPOINTMENT_API_KEY
+
+
 Business Config API
 
 Endpoint:
@@ -143,18 +155,27 @@ The website uses this API to fetch business information from the admin dashboard
 
 It returns:
 
-business name
-short name
-logo
-favicon
-theme color
-contact email
-contact phone
-address
-social links
-active website services
-business hours
-service areas
+- business name
+- short name
+- logo
+- favicon
+- theme color
+- contact email
+- contact phone
+- address
+- social links
+- active website services
+- business hours
+- service areas
+- FAQs
+- testimonials
+- media items
+- gallery images
+- offers
+- approved reviews
+- custom forms
+- website pages and content blocks
+- SEO settings
 
 Example website helper:
 
@@ -195,8 +216,19 @@ Example response:
   },
   "services": [],
   "business_hours": [],
-  "service_areas": []
+  "service_areas": [],
+  "faqs": [],
+  "testimonials": [],
+  "media": [],
+  "gallery": [],
+  "offers": [],
+  "reviews": [],
+  "forms": [],
+  "pages": [],
+  "seo": {}
 }
+
+
 Lead Submit API
 
 Endpoint:
@@ -284,6 +316,127 @@ Example response:
   "customer_id": "uuid-here",
   "message": "Lead submitted successfully."
 }
+
+
+
+
+## Forms API
+
+Fetch active forms:
+
+```txt
+GET /api/public/forms
+
+Fetch one form:
+
+GET /api/public/forms?slug=contact-form
+
+Submit form:
+
+POST /api/public/forms/submit
+
+Example submit body:
+
+{
+  "form_slug": "contact-form",
+  "data": {
+    "full-name": "Ali Khan",
+    "phone": "+923001234567",
+    "email": "ali@example.com",
+    "message": "I need details."
+  },
+  "page_url": "https://example.com/contact",
+  "referrer": "https://google.com"
+}
+
+Response:
+
+{
+  "success": true,
+  "submission_id": "uuid-here",
+  "message": "Form submitted successfully."
+}
+
+
+
+
+```md
+## Reviews API
+
+Submit customer review:
+
+```txt
+POST /api/public/reviews
+
+Example body:
+
+{
+  "customer_name": "Ali Khan",
+  "customer_phone": "+923001234567",
+  "customer_email": "ali@example.com",
+  "rating": 5,
+  "title": "Great service",
+  "comment": "Very helpful and professional."
+}
+
+Website reviews are saved as pending. Admin must approve them before they appear in public config API.
+
+
+
+```md
+## Coupons API
+
+Validate coupon:
+
+```txt
+POST /api/public/coupons/validate
+
+Redeem coupon:
+
+POST /api/public/coupons/redeem
+
+Example body:
+
+{
+  "code": "WELCOME10"
+}
+
+Validation checks:
+
+coupon exists
+coupon is active
+start date has passed
+end date has not passed
+usage limit is not reached
+
+Redeem API increases used_count.
+
+
+
+
+```md
+## Pages API
+
+Fetch all active pages:
+
+```txt
+GET /api/public/pages
+
+Fetch single page:
+
+GET /api/public/pages?slug=home
+
+Pages include active content blocks:
+
+hero
+text
+CTA
+image
+rich text
+
+
+
+
 Appointment Slots API
 
 Endpoint:
@@ -476,30 +629,47 @@ Time after closing	appointment blocked
 24h business day	appointment allowed
 Same service already booked at same time	appointment blocked
 Cancelled/rejected old appointment	slot can be reused
+
+
+
 Dashboard Modules Completed
-Module	Status
-Authentication	Complete
-Roles	Complete
-Permission overrides	Complete
-Staff management	Complete
-Logout/profile menu	Complete
-Super admin dashboard	Basic complete
-Business profile	Complete
-Business hours	Complete
-Service areas	Complete
-Services	Complete
-Customers	Complete
-Leads	Complete
-Notifications	Complete
-Activity logs	Complete
-Appointments dashboard	Complete
-Appointment detail page	Complete
-Appointment edit/reschedule	Complete
-Appointment status history	Complete
-Public lead API	Complete
-Public appointment API	Complete
-Public slots API	Complete
-Public business config API	Complete
+```md
+| Module | Status |
+|---|---|
+| Authentication | Complete |
+| Roles | Complete |
+| Permission overrides | Complete |
+| Staff management | Complete |
+| Logout/profile menu | Complete |
+| Super admin dashboard | Basic complete |
+| Business profile | Complete |
+| Business hours | Complete |
+| Service areas | Complete |
+| Services | Complete |
+| Customers | Complete |
+| Leads | Complete |
+| Notifications | Complete |
+| Activity logs | Complete |
+| Appointments dashboard | Complete |
+| Appointment detail page | Complete |
+| Appointment edit/reschedule | Complete |
+| Appointment status history | Complete |
+| Reports export | Complete |
+| Settings overview | Complete |
+| Profile page | Complete |
+| FAQs | Complete |
+| Testimonials | Complete |
+| Media/gallery | Complete |
+| Offers | Complete |
+| Coupons | Complete |
+| Reviews | Complete |
+| Forms | Complete |
+| Website pages/content blocks | Complete |
+| SEO settings | Complete |
+| Public website APIs | Complete core |
+
+
+
 New Business Setup Checklist
 
 Use this checklist for every new business.
