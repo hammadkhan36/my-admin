@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache";
 import { requirePermission, requireProfile } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase-server";
 import { logActivity } from "@/lib/activity-log";
+import {
+  actionFailure,
+  actionSuccess,
+  getErrorMessage,
+  type ActionState,
+} from "@/lib/action-state";
 
 function textOrNull(value: FormDataEntryValue | null) {
   const text = String(value || "").trim();
@@ -144,4 +150,42 @@ export async function deleteCoupon(formData: FormData) {
   });
 
   revalidatePath("/marketing/coupons");
+}
+
+
+
+export async function createCouponSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await createCoupon(formData);
+    return actionSuccess("Coupon created successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Coupon could not be created."));
+  }
+}
+
+export async function updateCouponSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await updateCoupon(formData);
+    return actionSuccess("Coupon updated successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Coupon could not be updated."));
+  }
+}
+
+export async function deleteCouponSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await deleteCoupon(formData);
+    return actionSuccess("Coupon deleted successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Coupon could not be deleted."));
+  }
 }

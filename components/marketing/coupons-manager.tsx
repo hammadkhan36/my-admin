@@ -3,17 +3,20 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { BadgePercent, Loader2, Pencil, Trash2 } from "lucide-react";
-import {
-  createCoupon,
-  deleteCoupon,
-  updateCoupon,
-} from "@/app/(admin)/marketing/coupons/actions";
+// import {
+//   createCoupon,
+//   deleteCoupon,
+//   updateCoupon,
+// } from "@/app/(admin)/marketing/coupons/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { CouponCreateForm, CouponEditForm } from "@/components/marketing/coupon-form";
+import { deleteCouponSafe } from "@/app/(admin)/marketing/coupons/actions";
+import { AppointmentActionForm } from "@/components/appointments/appointment-action-form";
 
 export type CouponRow = {
   id: string;
@@ -98,7 +101,7 @@ export function CouponsManager({ coupons }: { coupons: CouponRow[] }) {
         </CardHeader>
 
         <CardContent>
-          <form action={createCoupon} className="grid gap-4 md:grid-cols-2">
+          {/* <form action={createCoupon} className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Coupon Code</Label>
               <Input name="code" placeholder="WELCOME10" required />
@@ -153,7 +156,8 @@ export function CouponsManager({ coupons }: { coupons: CouponRow[] }) {
             <div className="md:col-span-2">
               <SubmitButton>Add Coupon</SubmitButton>
             </div>
-          </form>
+          </form> */}
+          <CouponCreateForm />
         </CardContent>
       </Card>
 
@@ -165,97 +169,98 @@ export function CouponsManager({ coupons }: { coupons: CouponRow[] }) {
             <Card key={coupon.id}>
               <CardContent className="p-4">
                 {isEditing ? (
-                  <form action={updateCoupon} className="grid gap-4 md:grid-cols-2">
-                    <input type="hidden" name="id" value={coupon.id} />
+                  // <form action={updateCoupon} className="grid gap-4 md:grid-cols-2">
+                  //   <input type="hidden" name="id" value={coupon.id} />
 
-                    <div className="space-y-2">
-                      <Label>Coupon Code</Label>
-                      <Input name="code" defaultValue={coupon.code} required />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Coupon Code</Label>
+                  //     <Input name="code" defaultValue={coupon.code} required />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>Title</Label>
-                      <Input name="title" defaultValue={coupon.title} required />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Title</Label>
+                  //     <Input name="title" defaultValue={coupon.title} required />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>Discount Type</Label>
-                      <select
-                        name="discount_type"
-                        defaultValue={coupon.discount_type}
-                        className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                      >
-                        <option value="percent">Percent</option>
-                        <option value="fixed">Fixed</option>
-                      </select>
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Discount Type</Label>
+                  //     <select
+                  //       name="discount_type"
+                  //       defaultValue={coupon.discount_type}
+                  //       className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  //     >
+                  //       <option value="percent">Percent</option>
+                  //       <option value="fixed">Fixed</option>
+                  //     </select>
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>Discount Value</Label>
-                      <Input
-                        name="discount_value"
-                        type="number"
-                        step="0.01"
-                        defaultValue={coupon.discount_value}
-                      />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Discount Value</Label>
+                  //     <Input
+                  //       name="discount_value"
+                  //       type="number"
+                  //       step="0.01"
+                  //       defaultValue={coupon.discount_value}
+                  //     />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>Starts At</Label>
-                      <Input
-                        name="starts_at"
-                        type="date"
-                        defaultValue={coupon.starts_at ?? ""}
-                      />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Starts At</Label>
+                  //     <Input
+                  //       name="starts_at"
+                  //       type="date"
+                  //       defaultValue={coupon.starts_at ?? ""}
+                  //     />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>Ends At</Label>
-                      <Input
-                        name="ends_at"
-                        type="date"
-                        defaultValue={coupon.ends_at ?? ""}
-                      />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Ends At</Label>
+                  //     <Input
+                  //       name="ends_at"
+                  //       type="date"
+                  //       defaultValue={coupon.ends_at ?? ""}
+                  //     />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>Usage Limit</Label>
-                      <Input
-                        name="usage_limit"
-                        type="number"
-                        defaultValue={coupon.usage_limit ?? ""}
-                      />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Usage Limit</Label>
+                  //     <Input
+                  //       name="usage_limit"
+                  //       type="number"
+                  //       defaultValue={coupon.usage_limit ?? ""}
+                  //     />
+                  //   </div>
 
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        name="is_active"
-                        defaultChecked={coupon.is_active}
-                      />
-                      Active
-                    </label>
+                  //   <label className="flex items-center gap-2 text-sm">
+                  //     <input
+                  //       type="checkbox"
+                  //       name="is_active"
+                  //       defaultChecked={coupon.is_active}
+                  //     />
+                  //     Active
+                  //   </label>
 
-                    <div className="space-y-2 md:col-span-2">
-                      <Label>Description</Label>
-                      <textarea
-                        name="description"
-                        defaultValue={coupon.description ?? ""}
-                        className="min-h-20 w-full rounded-md border bg-background px-3 py-2 text-sm"
-                      />
-                    </div>
+                  //   <div className="space-y-2 md:col-span-2">
+                  //     <Label>Description</Label>
+                  //     <textarea
+                  //       name="description"
+                  //       defaultValue={coupon.description ?? ""}
+                  //       className="min-h-20 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  //     />
+                  //   </div>
 
-                    <div className="flex gap-2 md:col-span-2">
-                      <SubmitButton>Save</SubmitButton>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setEditingId(null)}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </form>
+                  //   <div className="flex gap-2 md:col-span-2">
+                  //     <SubmitButton>Save</SubmitButton>
+                  //     <Button
+                  //       type="button"
+                  //       variant="outline"
+                  //       onClick={() => setEditingId(null)}
+                  //     >
+                  //       Cancel
+                  //     </Button>
+                  //   </div>
+                  // </form>
+                  <CouponEditForm coupon={coupon} onCancel={() => setEditingId(null)} />
                 ) : (
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div>
@@ -298,14 +303,25 @@ export function CouponsManager({ coupons }: { coupons: CouponRow[] }) {
                         Edit
                       </Button>
 
-                      <form action={deleteCoupon}>
+                      {/* <form action={deleteCoupon}>
                         <input type="hidden" name="id" value={coupon.id} />
                         <input type="hidden" name="code" value={coupon.code} />
                        <ConfirmSubmitButton message="Delete this item?" variant="destructive">
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </ConfirmSubmitButton>
-                      </form>
+                      </form> */}
+                      <AppointmentActionForm
+                        action={deleteCouponSafe}
+                        fields={{
+                          id: coupon.id,
+                          code: coupon.code,
+                        }}
+                        variant="destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </AppointmentActionForm>
                     </div>
                   </div>
                 )}
