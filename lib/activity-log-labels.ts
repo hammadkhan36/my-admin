@@ -245,6 +245,8 @@ export function getFriendlyActivityMessage(
         case "coupon.deleted":
             return `Coupon deleted${details?.code ? `: ${String(details.code)}` : ""}.`;
 
+        case "coupon.redeemed":
+            return `Coupon redeemed${details?.code ? `: ${String(details.code)}` : ""}.`;
 
         default:
             return formatEventType(eventType);
