@@ -42,6 +42,7 @@ export function getEventModule(eventType: string) {
     if (eventType.startsWith("media.")) return "Media";
     if (eventType.startsWith("offer.")) return "Offers";
     if (eventType.startsWith("coupon.")) return "Coupons";
+    if (eventType.startsWith("review.")) return "Reviews";
     return eventType.split(".")[0] || "System";
 }
 
@@ -247,6 +248,18 @@ export function getFriendlyActivityMessage(
 
         case "coupon.redeemed":
             return `Coupon redeemed${details?.code ? `: ${String(details.code)}` : ""}.`;
+
+        case "review.created":
+            return `Review created${details?.customer_name ? ` by ${String(details.customer_name)}` : ""}.`;
+
+        case "review.status_updated":
+            return `Review status changed${details?.status ? ` to ${String(details.status)}` : ""}.`;
+
+        case "review.featured_updated":
+            return `Review featured setting changed to ${details?.featured ? "featured" : "not featured"}.`;
+
+        case "review.deleted":
+            return `Review deleted${details?.customer_name ? `: ${String(details.customer_name)}` : ""}.`;
 
         default:
             return formatEventType(eventType);
