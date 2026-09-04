@@ -1,4 +1,5 @@
 import { requirePermission } from "@/lib/auth/server";
+import { requireFeatureEnabled } from "@/lib/features/server";
 
 export default async function SettingsLayout({
   children,
@@ -6,6 +7,7 @@ export default async function SettingsLayout({
   children: React.ReactNode;
 }) {
   await requirePermission("settings.view");
+  await requireFeatureEnabled("settings");
 
   return children;
 }

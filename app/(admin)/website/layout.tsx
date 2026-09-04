@@ -1,4 +1,5 @@
 import { requirePermission } from "@/lib/auth/server";
+import { requireFeatureEnabled } from "@/lib/features/server";
 
 export default async function WebsiteLayout({
   children,
@@ -6,6 +7,7 @@ export default async function WebsiteLayout({
   children: React.ReactNode;
 }) {
   await requirePermission("pages.view");
+  await requireFeatureEnabled("pages");
 
   return children;
 }

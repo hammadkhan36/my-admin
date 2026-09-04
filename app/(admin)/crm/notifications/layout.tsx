@@ -1,4 +1,5 @@
 import { requirePermission } from "@/lib/auth/server";
+import { requireFeatureEnabled } from "@/lib/features/server";
 
 export default async function NotificationsLayout({
   children,
@@ -6,6 +7,7 @@ export default async function NotificationsLayout({
   children: React.ReactNode;
 }) {
   await requirePermission("notifications.view");
+  await requireFeatureEnabled("notifications");
 
   return children;
 }
