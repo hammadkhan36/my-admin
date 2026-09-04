@@ -136,3 +136,36 @@ export async function deleteCustomForm(formData: FormData) {
 
   revalidatePath("/website/forms");
 }
+
+
+
+export async function deleteFormSubmission(formData: FormData) {
+  await requirePermission("forms.manage");
+
+  const profile = await requireProfile();
+  const supabase = await createClient();
+
+  const id = String(formData.get("id") || "");
+  const formSlug = String(formData.get("form_slug") || "form");
+
+  if (!id) {
+    throw new Error("Submission id is required.");
+  }
+
+  const { error } = await supabase
+    .from("form_submissions")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw new Error(error.message);
+
+  await logActivity({
+    actorId: profile.id,
+    eventType: "form.submission_deleted",
+    targetType: "form_submission",
+    targetId: id,
+    details: { form_slug: formSlug },
+  });
+
+  revalidatePath("/website/forms");
+}

@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
     { data: mediaItems, error: mediaError },
     { data: offers, error: offersError },
     { data: reviews, error: reviewsError },
+    { data: forms, error: formsError },
   ] = await Promise.all([
     supabase
       .from("business_settings")
@@ -131,6 +132,12 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false })
       .limit(20),
 
+    supabase
+      .from("custom_forms")
+      .select("id, name, slug, description, fields")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false }),
+
   ]);
 
 
@@ -143,6 +150,7 @@ export async function GET(request: NextRequest) {
   if (mediaError) return fail(mediaError.message, 500);
   if (offersError) return fail(offersError.message, 500);
   if (reviewsError) return fail(reviewsError.message, 500);
+  if (formsError) return fail(formsError.message, 500);
 
   return ok({
     business: businessSettings,
@@ -155,5 +163,6 @@ export async function GET(request: NextRequest) {
     gallery: (mediaItems ?? []).filter((item) => item.category === "gallery"),
     offers: offers ?? [],
     reviews: reviews ?? [],
+    if (formsError) return fail(formsError.message, 500);
   });
 }

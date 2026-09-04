@@ -274,6 +274,9 @@ export function getFriendlyActivityMessage(
         case "form.submitted":
             return `Form submitted${details?.form_name ? `: ${String(details.form_name)}` : ""}.`;
 
+        case "form.submission_deleted":
+            return `Form submission deleted${details?.form_slug ? ` from ${String(details.form_slug)}` : ""}.`;
+
         default:
             return formatEventType(eventType);
     }
