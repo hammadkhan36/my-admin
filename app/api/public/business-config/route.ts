@@ -163,6 +163,6 @@ export async function GET(request: NextRequest) {
     gallery: (mediaItems ?? []).filter((item) => item.category === "gallery"),
     offers: offers ?? [],
     reviews: reviews ?? [],
-    if (formsError) return fail(formsError.message, 500);
+    forms: forms ?? [],
   });
 }
