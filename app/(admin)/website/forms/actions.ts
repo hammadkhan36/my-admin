@@ -4,6 +4,13 @@ import { revalidatePath } from "next/cache";
 import { requirePermission, requireProfile } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase-server";
 import { logActivity } from "@/lib/activity-log";
+import {
+  actionFailure,
+  actionSuccess,
+  getErrorMessage,
+  type ActionState,
+} from "@/lib/action-state";
+
 
 function slugify(value: string) {
   return value
@@ -168,4 +175,53 @@ export async function deleteFormSubmission(formData: FormData) {
   });
 
   revalidatePath("/website/forms");
+}
+
+
+export async function createCustomFormSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await createCustomForm(formData);
+    return actionSuccess("Form created successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Form could not be created."));
+  }
+}
+
+export async function updateCustomFormSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await updateCustomForm(formData);
+    return actionSuccess("Form updated successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Form could not be updated."));
+  }
+}
+
+export async function deleteCustomFormSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await deleteCustomForm(formData);
+    return actionSuccess("Form deleted successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Form could not be deleted."));
+  }
+}
+
+export async function deleteFormSubmissionSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await deleteFormSubmission(formData);
+    return actionSuccess("Submission deleted successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Submission could not be deleted."));
+  }
 }

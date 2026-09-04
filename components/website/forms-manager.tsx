@@ -3,18 +3,29 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { FileText, Loader2, Pencil, Trash2 } from "lucide-react";
-import {
-    createCustomForm,
-    deleteCustomForm,
-    deleteFormSubmission,
-    updateCustomForm,
-} from "@/app/(admin)/website/forms/actions";
+// import {
+//     createCustomForm,
+//     deleteCustomForm,
+//     deleteFormSubmission,
+//     updateCustomForm,
+// } from "@/app/(admin)/website/forms/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import {
+    CustomFormCreateForm,
+    CustomFormEditForm,
+} from "@/components/website/custom-form-editor";
+import {
+    deleteCustomFormSafe,
+    deleteFormSubmissionSafe,
+} from "@/app/(admin)/website/forms/actions";
+import { AppointmentActionForm } from "@/components/appointments/appointment-action-form";
+
+
 
 export type CustomFormRow = {
     id: string;
@@ -122,7 +133,7 @@ export function FormsManager({
                 </CardHeader>
 
                 <CardContent>
-                    <form action={createCustomForm} className="grid gap-4">
+                    {/* <form action={createCustomForm} className="grid gap-4">
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
                                 <Label>Form Name</Label>
@@ -155,7 +166,8 @@ export function FormsManager({
                         <div>
                             <SubmitButton>Create Form</SubmitButton>
                         </div>
-                    </form>
+                    </form> */}
+                    <CustomFormCreateForm />
                 </CardContent>
             </Card>
 
@@ -167,58 +179,59 @@ export function FormsManager({
                         <Card key={form.id}>
                             <CardContent className="p-4">
                                 {isEditing ? (
-                                    <form action={updateCustomForm} className="grid gap-4">
-                                        <input type="hidden" name="id" value={form.id} />
+                                    // <form action={updateCustomForm} className="grid gap-4">
+                                    //     <input type="hidden" name="id" value={form.id} />
 
-                                        <div className="grid gap-4 md:grid-cols-2">
-                                            <div className="space-y-2">
-                                                <Label>Form Name</Label>
-                                                <Input name="name" defaultValue={form.name} required />
-                                            </div>
+                                    //     <div className="grid gap-4 md:grid-cols-2">
+                                    //         <div className="space-y-2">
+                                    //             <Label>Form Name</Label>
+                                    //             <Input name="name" defaultValue={form.name} required />
+                                    //         </div>
 
-                                            <div className="space-y-2">
-                                                <Label>Slug</Label>
-                                                <Input name="slug" defaultValue={form.slug} required />
-                                            </div>
-                                        </div>
+                                    //         <div className="space-y-2">
+                                    //             <Label>Slug</Label>
+                                    //             <Input name="slug" defaultValue={form.slug} required />
+                                    //         </div>
+                                    //     </div>
 
-                                        <div className="space-y-2">
-                                            <Label>Description</Label>
-                                            <Input
-                                                name="description"
-                                                defaultValue={form.description ?? ""}
-                                            />
-                                        </div>
+                                    //     <div className="space-y-2">
+                                    //         <Label>Description</Label>
+                                    //         <Input
+                                    //             name="description"
+                                    //             defaultValue={form.description ?? ""}
+                                    //         />
+                                    //     </div>
 
-                                        <div className="space-y-2">
-                                            <Label>Fields</Label>
-                                            <textarea
-                                                name="fields"
-                                                defaultValue={fieldsToText(form.fields)}
-                                                className="min-h-32 w-full rounded-md border bg-background px-3 py-2 text-sm font-mono"
-                                            />
-                                        </div>
+                                    //     <div className="space-y-2">
+                                    //         <Label>Fields</Label>
+                                    //         <textarea
+                                    //             name="fields"
+                                    //             defaultValue={fieldsToText(form.fields)}
+                                    //             className="min-h-32 w-full rounded-md border bg-background px-3 py-2 text-sm font-mono"
+                                    //         />
+                                    //     </div>
 
-                                        <label className="flex items-center gap-2 text-sm">
-                                            <input
-                                                type="checkbox"
-                                                name="is_active"
-                                                defaultChecked={form.is_active}
-                                            />
-                                            Active on website
-                                        </label>
+                                    //     <label className="flex items-center gap-2 text-sm">
+                                    //         <input
+                                    //             type="checkbox"
+                                    //             name="is_active"
+                                    //             defaultChecked={form.is_active}
+                                    //         />
+                                    //         Active on website
+                                    //     </label>
 
-                                        <div className="flex gap-2">
-                                            <SubmitButton>Save</SubmitButton>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={() => setEditingId(null)}
-                                            >
-                                                Cancel
-                                            </Button>
-                                        </div>
-                                    </form>
+                                    //     <div className="flex gap-2">
+                                    //         <SubmitButton>Save</SubmitButton>
+                                    //         <Button
+                                    //             type="button"
+                                    //             variant="outline"
+                                    //             onClick={() => setEditingId(null)}
+                                    //         >
+                                    //             Cancel
+                                    //         </Button>
+                                    //     </div>
+                                    // </form>
+                                    <CustomFormEditForm form={form} onCancel={() => setEditingId(null)} />
                                 ) : (
                                     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                                         <div>
@@ -258,14 +271,25 @@ export function FormsManager({
                                                 Edit
                                             </Button>
 
-                                            <form action={deleteCustomForm}>
+                                            {/* <form action={deleteCustomForm}>
                                                 <input type="hidden" name="id" value={form.id} />
                                                 <input type="hidden" name="name" value={form.name} />
                                               <ConfirmSubmitButton message="Delete this item?"> 
                                                     <Trash2 className="mr-2 h-4 w-4" />
                                                     Delete
                                                 </ConfirmSubmitButton>
-                                            </form>
+                                            </form> */}
+                                            <AppointmentActionForm
+                                                action={deleteCustomFormSafe}
+                                                fields={{
+                                                    id: form.id,
+                                                    name: form.name,
+                                                }}
+                                                variant="destructive"
+                                            >
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                Delete
+                                            </AppointmentActionForm>
                                         </div>
                                     </div>
                                 )}
@@ -323,14 +347,25 @@ export function FormsManager({
                             )}
 
                             <div className="mt-4">
-                                <form action={deleteFormSubmission}>
+                                {/* <form action={deleteFormSubmission}>
                                     <input type="hidden" name="id" value={submission.id} />
                                     <input type="hidden" name="form_slug" value={submission.form_slug} />
                                     <ConfirmSubmitButton message="Delete this item?" variant="destructive">
                                         <Trash2 className="mr-2 h-4 w-4" />
                                         Delete Submission
                                     </ConfirmSubmitButton>
-                                </form>
+                                </form> */}
+                                <AppointmentActionForm
+                                    action={deleteFormSubmissionSafe}
+                                    fields={{
+                                        id: submission.id,
+                                        form_slug: submission.form_slug,
+                                    }}
+                                    variant="destructive"
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete Submission
+                                </AppointmentActionForm>
                             </div>
                         </CardContent>
                     </Card>
