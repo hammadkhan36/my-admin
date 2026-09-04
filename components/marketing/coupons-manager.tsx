@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 
 export type CouponRow = {
   id: string;
@@ -300,10 +301,10 @@ export function CouponsManager({ coupons }: { coupons: CouponRow[] }) {
                       <form action={deleteCoupon}>
                         <input type="hidden" name="id" value={coupon.id} />
                         <input type="hidden" name="code" value={coupon.code} />
-                        <SubmitButton variant="destructive">
+                       <ConfirmSubmitButton message="Delete this item?" variant="destructive">
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
-                        </SubmitButton>
+                        </ConfirmSubmitButton>
                       </form>
                     </div>
                   </div>

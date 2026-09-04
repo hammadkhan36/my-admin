@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 
 export type ServiceRow = {
   id: string;
@@ -230,10 +231,12 @@ export function ServicesManager({
                       <form action={deleteService}>
                         <input type="hidden" name="id" value={service.id} />
                         <input type="hidden" name="name" value={service.name} />
-                        <Button type="submit" variant="destructive">
+                        {/* <Button type="submit" variant="destructive"> */}
+                          <ConfirmSubmitButton message="Delete this item?">
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
-                        </Button>
+                          </ConfirmSubmitButton>
+                        {/* </Button> */}
                       </form>
                     </div>
                   </div>

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 
 export type ReviewRow = {
   id: string;
@@ -240,10 +241,10 @@ export function ReviewsManager({ reviews }: { reviews: ReviewRow[] }) {
                       name="customer_name"
                       value={review.customer_name}
                     />
-                    <SubmitButton variant="destructive">
+                    <ConfirmSubmitButton message="Delete this item?" variant="destructive">
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete
-                    </SubmitButton>
+                    </ConfirmSubmitButton>
                   </form>
                 </div>
               </div>

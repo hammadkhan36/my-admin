@@ -29,6 +29,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 
 export type TeamMember = {
     id: string;
@@ -244,10 +245,10 @@ export function StaffManager({ members }: { members: TeamMember[] }) {
                                                 </form>
 
                                                 <form action={deleteTeamMember.bind(null, member.id)}>
-                                                    <Button type="submit" size="sm" variant="destructive">
+                                                   <ConfirmSubmitButton message="Delete this item?">
                                                         <Trash2 className="mr-1 h-3.5 w-3.5" />
                                                         Delete
-                                                    </Button>
+                                                    </ConfirmSubmitButton>
                                                 </form>
                                             </div>
                                         )}

@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { Eye, Loader2, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { AppointmentActionForm } from "@/components/appointments/appointment-action-form";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import {
   deleteAppointmentSafe,
   updateAppointmentStatusSafe,

@@ -12,7 +12,7 @@ import {
     deleteAppointmentSafe,
     updateAppointmentStatusSafe,
 } from "@/app/(admin)/appointments/actions";
-
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { AppointmentEditForm } from "@/components/appointments/appointment-edit-form";
 
 type AppointmentDetail = {

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 
 export type CustomFormRow = {
     id: string;
@@ -260,10 +261,10 @@ export function FormsManager({
                                             <form action={deleteCustomForm}>
                                                 <input type="hidden" name="id" value={form.id} />
                                                 <input type="hidden" name="name" value={form.name} />
-                                                <SubmitButton variant="destructive">
+                                              <ConfirmSubmitButton message="Delete this item?"> 
                                                     <Trash2 className="mr-2 h-4 w-4" />
                                                     Delete
-                                                </SubmitButton>
+                                                </ConfirmSubmitButton>
                                             </form>
                                         </div>
                                     </div>
@@ -325,10 +326,10 @@ export function FormsManager({
                                 <form action={deleteFormSubmission}>
                                     <input type="hidden" name="id" value={submission.id} />
                                     <input type="hidden" name="form_slug" value={submission.form_slug} />
-                                    <SubmitButton variant="destructive">
+                                    <ConfirmSubmitButton message="Delete this item?" variant="destructive">
                                         <Trash2 className="mr-2 h-4 w-4" />
                                         Delete Submission
-                                    </SubmitButton>
+                                    </ConfirmSubmitButton>
                                 </form>
                             </div>
                         </CardContent>

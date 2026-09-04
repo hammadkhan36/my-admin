@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 
 export type OfferRow = {
   id: string;
@@ -300,10 +301,10 @@ export function OffersManager({ offers }: { offers: OfferRow[] }) {
                       <form action={deleteOffer}>
                         <input type="hidden" name="id" value={offer.id} />
                         <input type="hidden" name="title" value={offer.title} />
-                        <SubmitButton variant="destructive">
+                         <ConfirmSubmitButton message="Delete this item?" variant="destructive">
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
-                        </SubmitButton>
+                        </ConfirmSubmitButton>
                       </form>
                     </div>
                   </div>
