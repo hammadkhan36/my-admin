@@ -25,6 +25,12 @@ import { requirePermission } from "@/lib/auth/server";
 import { DASHBOARD_CREATABLE_ROLES } from "@/lib/auth/roles";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { logActivity } from "@/lib/activity-log";
+import {
+  actionFailure,
+  actionSuccess,
+  getErrorMessage,
+  type ActionState,
+} from "@/lib/action-state";
 
 export type CreateMemberState = {
   success?: boolean;
@@ -232,4 +238,93 @@ export async function deleteTeamMember(memberId: string) {
   });
 
   revalidatePath("/team/staff");
+}
+
+
+
+
+export async function createTeamMemberSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    const result = await createTeamMember({}, formData);
+
+    if (result?.success === false) {
+      if (result.message) {
+        return actionFailure(result.message);
+      }
+
+      const firstError = Object.values(result.errors || {})[0]?.[0];
+
+      return actionFailure(firstError || "Team member could not be created.");
+    }
+
+    return actionSuccess(result?.message || "Team member created successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Team member could not be created."));
+  }
+}
+
+export async function setMemberActiveSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    const memberId = String(formData.get("memberId") || formData.get("id") || "");
+    const currentActive = String(formData.get("isActive") || formData.get("is_active")) === "true";
+
+    if (!memberId) {
+      return actionFailure("Member id is required.");
+    }
+
+    await setMemberActive(memberId, !currentActive);
+
+    return actionSuccess(
+      currentActive
+        ? "Team member deactivated successfully."
+        : "Team member activated successfully."
+    );
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Team member status could not be updated."));
+  }
+}
+
+export async function updateMemberPasswordSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    const memberId = String(formData.get("memberId") || formData.get("id") || "");
+    const password = String(formData.get("password") || "");
+
+    const fixedFormData = new FormData();
+    fixedFormData.set("memberId", memberId);
+    fixedFormData.set("password", password);
+
+    await updateMemberPassword(fixedFormData);
+
+    return actionSuccess("Password updated successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Password could not be updated."));
+  }
+}
+
+export async function deleteTeamMemberSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    const memberId = String(formData.get("memberId") || formData.get("id") || "");
+
+    if (!memberId) {
+      return actionFailure("Member id is required.");
+    }
+
+    await deleteTeamMember(memberId);
+
+    return actionSuccess("Team member deleted successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Team member could not be deleted."));
+  }
 }

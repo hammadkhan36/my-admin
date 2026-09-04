@@ -148,7 +148,7 @@ export function BusinessProfileForm({
             </div>
 
             <div className="md:col-span-2">
-              <PendingSubmitButton pendingText="Saving profile...">
+              <PendingSubmitButton>
                 <Save className="mr-2 h-4 w-4" />
                 Save Business Profile
               </PendingSubmitButton>

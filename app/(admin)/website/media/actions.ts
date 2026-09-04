@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache";
 import { requirePermission, requireProfile } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase-server";
 import { logActivity } from "@/lib/activity-log";
+import {
+  actionFailure,
+  actionSuccess,
+  getErrorMessage,
+  type ActionState,
+} from "@/lib/action-state";
 
 function numberOrZero(value: FormDataEntryValue | null) {
   const number = Number(value || 0);
@@ -129,3 +135,42 @@ export async function deleteMediaItem(formData: FormData) {
   revalidatePath("/website/media");
   revalidatePath("/reputation/gallery");
 }
+
+
+export async function createMediaItemSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await createMediaItem(formData);
+    return actionSuccess("Media item created successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Media item could not be created."));
+  }
+}
+
+export async function updateMediaItemSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await updateMediaItem(formData);
+    return actionSuccess("Media item updated successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Media item could not be updated."));
+  }
+}
+
+export async function deleteMediaItemSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await deleteMediaItem(formData);
+    return actionSuccess("Media item deleted successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Media item could not be deleted."));
+  }
+}
+
+

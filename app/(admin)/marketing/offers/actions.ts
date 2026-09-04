@@ -4,6 +4,13 @@ import { revalidatePath } from "next/cache";
 import { requirePermission, requireProfile } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase-server";
 import { logActivity } from "@/lib/activity-log";
+import {
+  actionFailure,
+  actionSuccess,
+  getErrorMessage,
+  type ActionState,
+} from "@/lib/action-state";
+
 
 function textOrNull(value: FormDataEntryValue | null) {
   const text = String(value || "").trim();
@@ -139,3 +146,44 @@ export async function deleteOffer(formData: FormData) {
 
   revalidatePath("/marketing/offers");
 }
+
+
+
+
+export async function createOfferSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await createOffer(formData);
+    return actionSuccess("Offer created successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Offer could not be created."));
+  }
+}
+
+export async function updateOfferSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await updateOffer(formData);
+    return actionSuccess("Offer updated successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Offer could not be updated."));
+  }
+}
+
+export async function deleteOfferSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await deleteOffer(formData);
+    return actionSuccess("Offer deleted successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Offer could not be deleted."));
+  }
+}
+
+

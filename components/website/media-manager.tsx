@@ -3,17 +3,21 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { ImageIcon, Loader2, Pencil, Trash2 } from "lucide-react";
-import {
-  createMediaItem,
-  deleteMediaItem,
-  updateMediaItem,
-} from "@/app/(admin)/website/media/actions";
+// import {
+//   createMediaItem,
+//   deleteMediaItem,
+//   updateMediaItem,
+// } from "@/app/(admin)/website/media/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { MediaCreateForm, MediaEditForm } from "@/components/website/media-forms";
+import { deleteMediaItemSafe } from "@/app/(admin)/website/media/actions";
+import { AppointmentActionForm } from "@/components/appointments/appointment-action-form";
+
 
 export type MediaRow = {
   id: string;
@@ -101,8 +105,9 @@ export function MediaManager({
           </CardTitle>
         </CardHeader>
 
+
         <CardContent>
-          <form action={createMediaItem} className="grid gap-4 md:grid-cols-2">
+          {/* <form action={createMediaItem} className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Title</Label>
               <Input name="title" placeholder="Store front photo" />
@@ -155,7 +160,8 @@ export function MediaManager({
             <div className="md:col-span-2">
               <SubmitButton>Add Media</SubmitButton>
             </div>
-          </form>
+          </form> */}
+          <MediaCreateForm />
         </CardContent>
       </Card>
 
@@ -167,7 +173,7 @@ export function MediaManager({
             <Card key={item.id} className="overflow-hidden">
               {isEditing ? (
                 <CardContent className="p-4">
-                  <form action={updateMediaItem} className="grid gap-4">
+                  {/* <form action={updateMediaItem} className="grid gap-4">
                     <input type="hidden" name="id" value={item.id} />
 
                     <div className="space-y-2">
@@ -246,7 +252,8 @@ export function MediaManager({
                         Cancel
                       </Button>
                     </div>
-                  </form>
+                  </form> */}
+                  <MediaEditForm item={item} onCancel={() => setEditingId(null)} />
                 </CardContent>
               ) : (
                 <>
@@ -289,7 +296,7 @@ export function MediaManager({
                         Edit
                       </Button>
 
-                      <form action={deleteMediaItem}>
+                      {/* <form action={deleteMediaItem}>
                         <input type="hidden" name="id" value={item.id} />
                         <input
                           type="hidden"
@@ -300,7 +307,18 @@ export function MediaManager({
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </ConfirmSubmitButton>
-                      </form>
+                      </form> */}
+                      <AppointmentActionForm
+                        action={deleteMediaItemSafe}
+                        fields={{
+                          id: item.id,
+                          title: item.title || item.image_url,
+                        }}
+                        variant="destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </AppointmentActionForm>
                     </div>
                   </CardContent>
                 </>

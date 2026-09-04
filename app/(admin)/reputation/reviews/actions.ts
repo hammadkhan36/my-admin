@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache";
 import { requirePermission, requireProfile } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase-server";
 import { logActivity } from "@/lib/activity-log";
+import {
+  actionFailure,
+  actionSuccess,
+  getErrorMessage,
+  type ActionState,
+} from "@/lib/action-state";
 
 function textOrNull(value: FormDataEntryValue | null) {
   const text = String(value || "").trim();
@@ -149,4 +155,56 @@ export async function deleteReview(formData: FormData) {
   });
 
   revalidatePath("/reputation/reviews");
+}
+
+
+
+
+
+export async function createReviewSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await createReview(formData);
+    return actionSuccess("Review created successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Review could not be created."));
+  }
+}
+
+export async function updateReviewStatusSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await updateReviewStatus(formData);
+    return actionSuccess("Review status updated successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Review status could not be updated."));
+  }
+}
+
+export async function updateReviewFeaturedSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await updateReviewFeatured(formData);
+    return actionSuccess("Review featured setting updated successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Review featured setting could not be updated."));
+  }
+}
+
+export async function deleteReviewSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await deleteReview(formData);
+    return actionSuccess("Review deleted successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Review could not be deleted."));
+  }
 }

@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache";
 import { requirePermission, requireProfile } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase-server";
 import { logActivity } from "@/lib/activity-log";
+import {
+  actionFailure,
+  actionSuccess,
+  getErrorMessage,
+  type ActionState,
+} from "@/lib/action-state";
 
 function numberOrNull(value: FormDataEntryValue | null) {
   if (!value) return null;
@@ -122,4 +128,40 @@ export async function deleteTestimonial(formData: FormData) {
   });
 
   revalidatePath("/reputation/testimonials");
+}
+
+export async function createTestimonialSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await createTestimonial(formData);
+    return actionSuccess("Testimonial created successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Testimonial could not be created."));
+  }
+}
+
+export async function updateTestimonialSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await updateTestimonial(formData);
+    return actionSuccess("Testimonial updated successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Testimonial could not be updated."));
+  }
+}
+
+export async function deleteTestimonialSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await deleteTestimonial(formData);
+    return actionSuccess("Testimonial deleted successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Testimonial could not be deleted."));
+  }
 }

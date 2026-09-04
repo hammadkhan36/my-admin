@@ -3,17 +3,21 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { BadgePercent, CalendarDays, Loader2, Pencil, Trash2 } from "lucide-react";
-import {
-  createOffer,
-  deleteOffer,
-  updateOffer,
-} from "@/app/(admin)/marketing/offers/actions";
+// import {
+//   createOffer,
+//   deleteOffer,
+//   updateOffer,
+// } from "@/app/(admin)/marketing/offers/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { OfferCreateForm, OfferEditForm } from "@/components/marketing/offer-forms";
+import { deleteOfferSafe } from "@/app/(admin)/marketing/offers/actions";
+import { AppointmentActionForm } from "@/components/appointments/appointment-action-form";
+
 
 export type OfferRow = {
   id: string;
@@ -92,8 +96,10 @@ export function OffersManager({ offers }: { offers: OfferRow[] }) {
           </CardTitle>
         </CardHeader>
 
+
+
         <CardContent>
-          <form action={createOffer} className="grid gap-4 md:grid-cols-2">
+          {/* <form action={createOffer} className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Title</Label>
               <Input name="title" placeholder="20% Off This Week" required />
@@ -146,7 +152,8 @@ export function OffersManager({ offers }: { offers: OfferRow[] }) {
             <div className="md:col-span-2">
               <SubmitButton>Add Offer</SubmitButton>
             </div>
-          </form>
+          </form> */}
+          <OfferCreateForm />
         </CardContent>
       </Card>
 
@@ -154,97 +161,100 @@ export function OffersManager({ offers }: { offers: OfferRow[] }) {
         {offers.map((offer) => {
           const isEditing = editingId === offer.id;
 
+
           return (
             <Card key={offer.id}>
               <CardContent className="p-4">
                 {isEditing ? (
-                  <form action={updateOffer} className="grid gap-4 md:grid-cols-2">
-                    <input type="hidden" name="id" value={offer.id} />
+                  // <form action={updateOffer} className="grid gap-4 md:grid-cols-2">
 
-                    <div className="space-y-2">
-                      <Label>Title</Label>
-                      <Input name="title" defaultValue={offer.title} required />
-                    </div>
+                  //   <input type="hidden" name="id" value={offer.id} />
 
-                    <div className="space-y-2">
-                      <Label>Discount Label</Label>
-                      <Input
-                        name="discount_label"
-                        defaultValue={offer.discount_label ?? ""}
-                      />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Title</Label>
+                  //     <Input name="title" defaultValue={offer.title} required />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>Starts At</Label>
-                      <Input
-                        name="starts_at"
-                        type="date"
-                        defaultValue={offer.starts_at ?? ""}
-                      />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Discount Label</Label>
+                  //     <Input
+                  //       name="discount_label"
+                  //       defaultValue={offer.discount_label ?? ""}
+                  //     />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>Ends At</Label>
-                      <Input
-                        name="ends_at"
-                        type="date"
-                        defaultValue={offer.ends_at ?? ""}
-                      />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Starts At</Label>
+                  //     <Input
+                  //       name="starts_at"
+                  //       type="date"
+                  //       defaultValue={offer.starts_at ?? ""}
+                  //     />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>CTA Label</Label>
-                      <Input name="cta_label" defaultValue={offer.cta_label ?? ""} />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Ends At</Label>
+                  //     <Input
+                  //       name="ends_at"
+                  //       type="date"
+                  //       defaultValue={offer.ends_at ?? ""}
+                  //     />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>CTA URL</Label>
-                      <Input name="cta_url" defaultValue={offer.cta_url ?? ""} />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>CTA Label</Label>
+                  //     <Input name="cta_label" defaultValue={offer.cta_label ?? ""} />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>Image URL</Label>
-                      <Input name="image_url" defaultValue={offer.image_url ?? ""} />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>CTA URL</Label>
+                  //     <Input name="cta_url" defaultValue={offer.cta_url ?? ""} />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>Sort Order</Label>
-                      <Input
-                        name="sort_order"
-                        type="number"
-                        defaultValue={offer.sort_order}
-                      />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Image URL</Label>
+                  //     <Input name="image_url" defaultValue={offer.image_url ?? ""} />
+                  //   </div>
 
-                    <div className="space-y-2 md:col-span-2">
-                      <Label>Description</Label>
-                      <textarea
-                        name="description"
-                        defaultValue={offer.description ?? ""}
-                        className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm"
-                      />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Sort Order</Label>
+                  //     <Input
+                  //       name="sort_order"
+                  //       type="number"
+                  //       defaultValue={offer.sort_order}
+                  //     />
+                  //   </div>
 
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        name="is_active"
-                        defaultChecked={offer.is_active}
-                      />
-                      Active on website
-                    </label>
+                  //   <div className="space-y-2 md:col-span-2">
+                  //     <Label>Description</Label>
+                  //     <textarea
+                  //       name="description"
+                  //       defaultValue={offer.description ?? ""}
+                  //       className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  //     />
+                  //   </div>
 
-                    <div className="flex gap-2 md:col-span-2">
-                      <SubmitButton>Save</SubmitButton>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setEditingId(null)}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </form>
+                  //   <label className="flex items-center gap-2 text-sm">
+                  //     <input
+                  //       type="checkbox"
+                  //       name="is_active"
+                  //       defaultChecked={offer.is_active}
+                  //     />
+                  //     Active on website
+                  //   </label>
+
+                  //   <div className="flex gap-2 md:col-span-2">
+                  //     <SubmitButton>Save</SubmitButton>
+                  //     <Button
+                  //       type="button"
+                  //       variant="outline"
+                  //       onClick={() => setEditingId(null)}
+                  //     >
+                  //       Cancel
+                  //     </Button>
+                  //   </div>
+                  // </form>
+                  <OfferEditForm offer={offer} onCancel={() => setEditingId(null)} />
                 ) : (
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div className="flex gap-4">
@@ -298,14 +308,25 @@ export function OffersManager({ offers }: { offers: OfferRow[] }) {
                         Edit
                       </Button>
 
-                      <form action={deleteOffer}>
+                      {/* <form action={deleteOffer}>
                         <input type="hidden" name="id" value={offer.id} />
                         <input type="hidden" name="title" value={offer.title} />
                          <ConfirmSubmitButton message="Delete this item?" variant="destructive">
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </ConfirmSubmitButton>
-                      </form>
+                      </form> */}
+                      <AppointmentActionForm
+                        action={deleteOfferSafe}
+                        fields={{
+                          id: offer.id,
+                          title: offer.title,
+                        }}
+                        variant="destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </AppointmentActionForm>
                     </div>
                   </div>
                 )}

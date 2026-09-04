@@ -3,17 +3,23 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2, Pencil, Quote, Star, Trash2 } from "lucide-react";
-import {
-  createTestimonial,
-  deleteTestimonial,
-  updateTestimonial,
-} from "@/app/(admin)/reputation/testimonials/actions";
+// import {
+//   createTestimonial,
+//   deleteTestimonial,
+//   updateTestimonial,
+// } from "@/app/(admin)/reputation/testimonials/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import {
+  TestimonialCreateForm,
+  TestimonialEditForm,
+} from "@/components/reputation/testimonial-forms";
+import { deleteTestimonialSafe } from "@/app/(admin)/reputation/testimonials/actions";
+import { AppointmentActionForm } from "@/components/appointments/appointment-action-form";
 
 export type TestimonialRow = {
   id: string;
@@ -110,7 +116,7 @@ export function TestimonialsManager({
         </CardHeader>
 
         <CardContent>
-          <form action={createTestimonial} className="grid gap-4 md:grid-cols-2">
+          {/* <form action={createTestimonial} className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Customer Name</Label>
               <Input name="customer_name" placeholder="Ali Khan" required />
@@ -149,7 +155,8 @@ export function TestimonialsManager({
             <div className="md:col-span-2">
               <SubmitButton>Add Testimonial</SubmitButton>
             </div>
-          </form>
+          </form> */}
+          <TestimonialCreateForm />
         </CardContent>
       </Card>
 
@@ -161,84 +168,88 @@ export function TestimonialsManager({
             <Card key={testimonial.id}>
               <CardContent className="p-4">
                 {isEditing ? (
-                  <form action={updateTestimonial} className="grid gap-4 md:grid-cols-2">
-                    <input type="hidden" name="id" value={testimonial.id} />
+                  // <form action={updateTestimonial} className="grid gap-4 md:grid-cols-2">
+                  //   <input type="hidden" name="id" value={testimonial.id} />
 
-                    <div className="space-y-2">
-                      <Label>Customer Name</Label>
-                      <Input
-                        name="customer_name"
-                        defaultValue={testimonial.customer_name}
-                        required
-                      />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Customer Name</Label>
+                  //     <Input
+                  //       name="customer_name"
+                  //       defaultValue={testimonial.customer_name}
+                  //       required
+                  //     />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>Customer Role</Label>
-                      <Input
-                        name="customer_role"
-                        defaultValue={testimonial.customer_role ?? ""}
-                      />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Customer Role</Label>
+                  //     <Input
+                  //       name="customer_role"
+                  //       defaultValue={testimonial.customer_role ?? ""}
+                  //     />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>Rating</Label>
-                      <Input
-                        name="rating"
-                        type="number"
-                        min={1}
-                        max={5}
-                        defaultValue={testimonial.rating ?? ""}
-                      />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Rating</Label>
+                  //     <Input
+                  //       name="rating"
+                  //       type="number"
+                  //       min={1}
+                  //       max={5}
+                  //       defaultValue={testimonial.rating ?? ""}
+                  //     />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>Sort Order</Label>
-                      <Input
-                        name="sort_order"
-                        type="number"
-                        defaultValue={testimonial.sort_order}
-                      />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Sort Order</Label>
+                  //     <Input
+                  //       name="sort_order"
+                  //       type="number"
+                  //       defaultValue={testimonial.sort_order}
+                  //     />
+                  //   </div>
 
-                    <div className="space-y-2 md:col-span-2">
-                      <Label>Image URL</Label>
-                      <Input
-                        name="image_url"
-                        defaultValue={testimonial.image_url ?? ""}
-                      />
-                    </div>
+                  //   <div className="space-y-2 md:col-span-2">
+                  //     <Label>Image URL</Label>
+                  //     <Input
+                  //       name="image_url"
+                  //       defaultValue={testimonial.image_url ?? ""}
+                  //     />
+                  //   </div>
 
-                    <div className="space-y-2 md:col-span-2">
-                      <Label>Quote</Label>
-                      <textarea
-                        name="quote"
-                        defaultValue={testimonial.quote}
-                        required
-                        className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm"
-                      />
-                    </div>
+                  //   <div className="space-y-2 md:col-span-2">
+                  //     <Label>Quote</Label>
+                  //     <textarea
+                  //       name="quote"
+                  //       defaultValue={testimonial.quote}
+                  //       required
+                  //       className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  //     />
+                  //   </div>
 
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        name="is_active"
-                        defaultChecked={testimonial.is_active}
-                      />
-                      Active on website
-                    </label>
+                  //   <label className="flex items-center gap-2 text-sm">
+                  //     <input
+                  //       type="checkbox"
+                  //       name="is_active"
+                  //       defaultChecked={testimonial.is_active}
+                  //     />
+                  //     Active on website
+                  //   </label>
 
-                    <div className="flex gap-2 md:col-span-2">
-                      <SubmitButton>Save</SubmitButton>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setEditingId(null)}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </form>
+                  //   <div className="flex gap-2 md:col-span-2">
+                  //     <SubmitButton>Save</SubmitButton>
+                  //     <Button
+                  //       type="button"
+                  //       variant="outline"
+                  //       onClick={() => setEditingId(null)}
+                  //     >
+                  //       Cancel
+                  //     </Button>
+                  //   </div>
+                  // </form>
+                  <TestimonialEditForm
+                    testimonial={testimonial}
+                    onCancel={() => setEditingId(null)}
+                  />
                 ) : (
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div className="flex gap-4">
@@ -291,7 +302,7 @@ export function TestimonialsManager({
                         Edit
                       </Button>
 
-                      <form action={deleteTestimonial}>
+                      {/* <form action={deleteTestimonial}>
                         <input type="hidden" name="id" value={testimonial.id} />
                         <input
                           type="hidden"
@@ -302,7 +313,18 @@ export function TestimonialsManager({
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </ConfirmSubmitButton>
-                      </form>
+                      </form> */}
+                      <AppointmentActionForm
+                        action={deleteTestimonialSafe}
+                        fields={{
+                          id: testimonial.id,
+                          customer_name: testimonial.customer_name,
+                        }}
+                        variant="destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </AppointmentActionForm>
                     </div>
                   </div>
                 )}

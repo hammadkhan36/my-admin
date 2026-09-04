@@ -2,18 +2,27 @@
 
 import { useFormStatus } from "react-dom";
 import { Loader2, Star, Trash2 } from "lucide-react";
-import {
-  createReview,
-  deleteReview,
-  updateReviewFeatured,
-  updateReviewStatus,
-} from "@/app/(admin)/reputation/reviews/actions";
+// import {
+//   createReview,
+//   deleteReview,
+//   updateReviewFeatured,
+//   updateReviewStatus,
+// } from "@/app/(admin)/reputation/reviews/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+
+import { ReviewCreateForm } from "@/components/reputation/review-form";
+import {
+  deleteReviewSafe,
+  updateReviewFeaturedSafe,
+  updateReviewStatusSafe,
+} from "@/app/(admin)/reputation/reviews/actions";
+import { AppointmentActionForm } from "@/components/appointments/appointment-action-form";
+
 
 export type ReviewRow = {
   id: string;
@@ -118,7 +127,7 @@ export function ReviewsManager({ reviews }: { reviews: ReviewRow[] }) {
         </CardHeader>
 
         <CardContent>
-          <form action={createReview} className="grid gap-4 md:grid-cols-2">
+          {/* <form action={createReview} className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Customer Name</Label>
               <Input name="customer_name" placeholder="Ali Khan" required />
@@ -175,7 +184,8 @@ export function ReviewsManager({ reviews }: { reviews: ReviewRow[] }) {
             <div className="md:col-span-2">
               <SubmitButton>Add Review</SubmitButton>
             </div>
-          </form>
+          </form> */}
+          <ReviewCreateForm />
         </CardContent>
       </Card>
 
@@ -215,14 +225,24 @@ export function ReviewsManager({ reviews }: { reviews: ReviewRow[] }) {
 
                 <div className="flex shrink-0 flex-wrap gap-2">
                   {["pending", "approved", "rejected"].map((status) => (
-                    <form key={status} action={updateReviewStatus}>
-                      <input type="hidden" name="id" value={review.id} />
-                      <input type="hidden" name="status" value={status} />
-                      <SubmitButton variant="outline">{status}</SubmitButton>
-                    </form>
+                    // <form key={status} action={updateReviewStatus}>
+                    //   <input type="hidden" name="id" value={review.id} />
+                    //   <input type="hidden" name="status" value={status} />
+                    //   <SubmitButton variant="outline">{status}</SubmitButton>
+                    // </form>
+                    <AppointmentActionForm
+                      key={status}
+                      action={updateReviewStatusSafe}
+                      fields={{
+                        id: review.id,
+                        status,
+                      }}
+                    >
+                      {status}
+                    </AppointmentActionForm>
                   ))}
 
-                  <form action={updateReviewFeatured}>
+                  {/* <form action={updateReviewFeatured}>
                     <input type="hidden" name="id" value={review.id} />
                     <input
                       type="hidden"
@@ -232,9 +252,19 @@ export function ReviewsManager({ reviews }: { reviews: ReviewRow[] }) {
                     <SubmitButton variant="secondary">
                       {review.is_featured ? "Unfeature" : "Feature"}
                     </SubmitButton>
-                  </form>
+                  </form> */}
+                  <AppointmentActionForm
+                    action={updateReviewFeaturedSafe}
+                    fields={{
+                      id: review.id,
+                      is_featured: String(review.is_featured),
+                    }}
+                    variant="secondary"
+                  >
+                    {review.is_featured ? "Unfeature" : "Feature"}
+                  </AppointmentActionForm>
 
-                  <form action={deleteReview}>
+                  {/* <form action={deleteReview}>
                     <input type="hidden" name="id" value={review.id} />
                     <input
                       type="hidden"
@@ -245,7 +275,18 @@ export function ReviewsManager({ reviews }: { reviews: ReviewRow[] }) {
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete
                     </ConfirmSubmitButton>
-                  </form>
+                  </form> */}
+                  <AppointmentActionForm
+                    action={deleteReviewSafe}
+                    fields={{
+                      id: review.id,
+                      customer_name: review.customer_name,
+                    }}
+                    variant="destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </AppointmentActionForm>
                 </div>
               </div>
             </CardContent>

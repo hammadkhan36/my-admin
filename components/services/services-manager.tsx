@@ -3,18 +3,26 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Clock, Globe2, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
-import {
-  createService,
-  deleteService,
-  toggleServiceStatus,
-  updateService,
-} from "@/app/(admin)/crm/services/actions";
+// import {
+//   createService,
+//   deleteService,
+//   toggleServiceStatus,
+//   updateService,
+// } from "@/app/(admin)/crm/services/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+
+import { ServiceCreateForm, ServiceEditForm } from "@/components/services/service-forms";
+import {
+  deleteServiceSafe,
+  toggleServiceStatusSafe,
+} from "@/app/(admin)/crm/services/actions";
+import { AppointmentActionForm } from "@/components/appointments/appointment-action-form";
+
 
 export type ServiceRow = {
   id: string;
@@ -95,7 +103,7 @@ export function ServicesManager({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={createService} className="grid gap-4 md:grid-cols-5">
+          {/* <form action={createService} className="grid gap-4 md:grid-cols-5">
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="name">Service Name</Label>
               <Input id="name" name="name" placeholder="Website Design" required />
@@ -124,7 +132,8 @@ export function ServicesManager({
               <input name="show_on_website" type="checkbox" defaultChecked />
               Show on website
             </label>
-          </form>
+          </form> */}
+          <ServiceCreateForm />
         </CardContent>
       </Card>
 
@@ -136,54 +145,55 @@ export function ServicesManager({
             <Card key={service.id}>
               <CardContent className="p-4">
                 {isEditing ? (
-                  <form action={updateService} className="grid gap-4 md:grid-cols-5">
-                    <input type="hidden" name="id" value={service.id} />
+                  // <form action={updateService} className="grid gap-4 md:grid-cols-5">
+                  //   <input type="hidden" name="id" value={service.id} />
 
-                    <div className="space-y-2 md:col-span-2">
-                      <Label>Name</Label>
-                      <Input name="name" defaultValue={service.name} required />
-                    </div>
+                  //   <div className="space-y-2 md:col-span-2">
+                  //     <Label>Name</Label>
+                  //     <Input name="name" defaultValue={service.name} required />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>Price</Label>
-                      <Input
-                        name="price"
-                        type="number"
-                        step="0.01"
-                        defaultValue={service.price ?? ""}
-                      />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Price</Label>
+                  //     <Input
+                  //       name="price"
+                  //       type="number"
+                  //       step="0.01"
+                  //       defaultValue={service.price ?? ""}
+                  //     />
+                  //   </div>
 
-                    <div className="space-y-2">
-                      <Label>Duration</Label>
-                      <Input
-                        name="duration_minutes"
-                        type="number"
-                        defaultValue={service.duration_minutes ?? ""}
-                      />
-                    </div>
+                  //   <div className="space-y-2">
+                  //     <Label>Duration</Label>
+                  //     <Input
+                  //       name="duration_minutes"
+                  //       type="number"
+                  //       defaultValue={service.duration_minutes ?? ""}
+                  //     />
+                  //   </div>
 
-                    <div className="flex items-end gap-2">
-                      <SubmitButton>Save</SubmitButton>
-                      <Button type="button" variant="outline" onClick={() => setEditingId(null)}>
-                        Cancel
-                      </Button>
-                    </div>
+                  //   <div className="flex items-end gap-2">
+                  //     <SubmitButton>Save</SubmitButton>
+                  //     <Button type="button" variant="outline" onClick={() => setEditingId(null)}>
+                  //       Cancel
+                  //     </Button>
+                  //   </div>
 
-                    <div className="space-y-2 md:col-span-4">
-                      <Label>Description</Label>
-                      <Input name="description" defaultValue={service.description ?? ""} />
-                    </div>
+                  //   <div className="space-y-2 md:col-span-4">
+                  //     <Label>Description</Label>
+                  //     <Input name="description" defaultValue={service.description ?? ""} />
+                  //   </div>
 
-                    <label className="flex items-end gap-2 text-sm">
-                      <input
-                        name="show_on_website"
-                        type="checkbox"
-                        defaultChecked={service.show_on_website}
-                      />
-                      Show on website
-                    </label>
-                  </form>
+                  //   <label className="flex items-end gap-2 text-sm">
+                  //     <input
+                  //       name="show_on_website"
+                  //       type="checkbox"
+                  //       defaultChecked={service.show_on_website}
+                  //     />
+                  //     Show on website
+                  //   </label>
+                  // </form>
+                  <ServiceEditForm service={service} onCancel={() => setEditingId(null)} />
                 ) : (
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
@@ -221,23 +231,42 @@ export function ServicesManager({
                         Edit
                       </Button>
 
-                      <form action={toggleServiceStatus}>
+                      {/* <form action={toggleServiceStatus}>
                         <input type="hidden" name="id" value={service.id} />
                         <input type="hidden" name="name" value={service.name} />
                         <input type="hidden" name="is_active" value={String(service.is_active)} />
                         <SubmitButton>{service.is_active ? "Disable" : "Enable"}</SubmitButton>
-                      </form>
+                      </form> */}
+                      <AppointmentActionForm
+                        action={toggleServiceStatusSafe}
+                        fields={{
+                          id: service.id,
+                          name: service.name,
+                          is_active: String(service.is_active),
+                        }}
+                      >
+                        {service.is_active ? "Disable" : "Enable"}
+                      </AppointmentActionForm>
 
-                      <form action={deleteService}>
+                      {/* <form action={deleteService}>
                         <input type="hidden" name="id" value={service.id} />
                         <input type="hidden" name="name" value={service.name} />
-                        {/* <Button type="submit" variant="destructive"> */}
                           <ConfirmSubmitButton message="Delete this item?">
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                           </ConfirmSubmitButton>
-                        {/* </Button> */}
-                      </form>
+                      </form> */}
+                      <AppointmentActionForm
+                        action={deleteServiceSafe}
+                        fields={{
+                          id: service.id,
+                          name: service.name,
+                        }}
+                        variant="destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </AppointmentActionForm>
                     </div>
                   </div>
                 )}

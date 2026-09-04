@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache";
 import { requirePermission, requireProfile } from "@/lib/auth/server";
 import { logActivity } from "@/lib/activity-log";
 import { createClient } from "@/lib/supabase-server";
+import {
+  actionFailure,
+  actionSuccess,
+  getErrorMessage,
+  type ActionState,
+} from "@/lib/action-state";
 
 function numberOrNull(value: FormDataEntryValue | null) {
   if (!value) return null;
@@ -149,3 +155,55 @@ export async function deleteService(formData: FormData) {
   revalidatePath("/appointments/services");
   revalidatePath("/website/services");
 }
+
+
+
+export async function createServiceSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await createService(formData);
+    return actionSuccess("Service created successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Service could not be created."));
+  }
+}
+
+export async function updateServiceSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await updateService(formData);
+    return actionSuccess("Service updated successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Service could not be updated."));
+  }
+}
+
+export async function toggleServiceStatusSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await toggleServiceStatus(formData);
+    return actionSuccess("Service status updated successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Service status could not be updated."));
+  }
+}
+
+export async function deleteServiceSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await deleteService(formData);
+    return actionSuccess("Service deleted successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Service could not be deleted."));
+  }
+}
+
+

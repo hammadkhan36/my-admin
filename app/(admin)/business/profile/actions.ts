@@ -8,6 +8,12 @@ import { z } from "zod";
 import { requirePermission } from "@/lib/auth/server";
 import { logActivity } from "@/lib/activity-log";
 import { createAdminClient } from "@/lib/supabase-admin";
+import {
+  actionFailure,
+  actionSuccess,
+  getErrorMessage,
+  type ActionState,
+} from "@/lib/action-state";
 
 type BusinessProfileState = {
   success?: boolean;
@@ -97,4 +103,17 @@ export async function updateBusinessProfile(
     success: true,
     message: "Business profile updated successfully.",
   };
+}
+
+
+export async function updateBusinessProfileSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await updateBusinessProfile(_prevState, formData);
+    return actionSuccess("Business profile updated successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "Business profile could not be updated."));
+  }
 }

@@ -4,6 +4,13 @@ import { revalidatePath } from "next/cache";
 import { requirePermission, requireProfile } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase-server";
 import { logActivity } from "@/lib/activity-log";
+import {
+  actionFailure,
+  actionSuccess,
+  getErrorMessage,
+  type ActionState,
+} from "@/lib/action-state";
+
 
 export async function createFaq(formData: FormData) {
   await requirePermission("faqs.manage");
@@ -104,4 +111,45 @@ export async function deleteFaq(formData: FormData) {
   });
 
   revalidatePath("/website/faqs");
+}
+
+
+
+
+
+
+export async function createFaqSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await createFaq(formData);
+    return actionSuccess("FAQ created successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "FAQ could not be created."));
+  }
+}
+
+export async function updateFaqSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await updateFaq(formData);
+    return actionSuccess("FAQ updated successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "FAQ could not be updated."));
+  }
+}
+
+export async function deleteFaqSafe(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await deleteFaq(formData);
+    return actionSuccess("FAQ deleted successfully.");
+  } catch (error) {
+    return actionFailure(getErrorMessage(error, "FAQ could not be deleted."));
+  }
 }
