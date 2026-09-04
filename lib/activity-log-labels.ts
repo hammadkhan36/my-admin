@@ -45,6 +45,7 @@ export function getEventModule(eventType: string) {
     if (eventType.startsWith("coupon.")) return "Coupons";
     if (eventType.startsWith("review.")) return "Reviews";
     if (eventType.startsWith("form.")) return "Forms";
+    if (eventType.startsWith("seo_settings.")) return "SEO";
     if (
         eventType.startsWith("website_page.") ||
         eventType.startsWith("content_block.")
@@ -301,6 +302,9 @@ export function getFriendlyActivityMessage(
 
         case "content_block.deleted":
             return `Content block deleted${details?.block_key ? `: ${String(details.block_key)}` : ""}.`;
+
+        case "seo_settings.updated":
+            return "SEO settings were updated.";
 
         default:
             return formatEventType(eventType);

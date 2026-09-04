@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
     { data: reviews, error: reviewsError },
     { data: forms, error: formsError },
     { data: pages, error: pagesError },
+    { data: seoSettings, error: seoError },
   ] = await Promise.all([
     supabase
       .from("business_settings")
@@ -139,10 +140,10 @@ export async function GET(request: NextRequest) {
       .eq("is_active", true)
       .order("created_at", { ascending: false }),
 
-      supabase
-  .from("website_pages")
-  .select(
-    `
+    supabase
+      .from("website_pages")
+      .select(
+        `
     id,
     slug,
     title,
@@ -161,14 +162,23 @@ export async function GET(request: NextRequest) {
       sort_order
     )
   `
-  )
-  .eq("is_active", true)
-  .eq("website_content_blocks.is_active", true)
-  .order("created_at", { ascending: false })
-  .order("sort_order", {
-    foreignTable: "website_content_blocks",
-    ascending: true,
-  }),
+      )
+      .eq("is_active", true)
+      .eq("website_content_blocks.is_active", true)
+      .order("created_at", { ascending: false })
+      .order("sort_order", {
+        foreignTable: "website_content_blocks",
+        ascending: true,
+      }),
+
+
+    supabase
+      .from("seo_settings")
+      .select(
+        "default_meta_title, default_meta_description, default_keywords, og_image_url, enable_local_business_schema, enable_faq_schema, enable_review_schema, google_analytics_id, google_search_console_verification"
+      )
+      .limit(1)
+      .maybeSingle(),
 
   ]);
 
@@ -184,6 +194,7 @@ export async function GET(request: NextRequest) {
   if (reviewsError) return fail(reviewsError.message, 500);
   if (formsError) return fail(formsError.message, 500);
   if (pagesError) return fail(pagesError.message, 500);
+  if (seoError) return fail(seoError.message, 500);
 
 
   return ok({
@@ -199,5 +210,6 @@ export async function GET(request: NextRequest) {
     reviews: reviews ?? [],
     forms: forms ?? [],
     pages: pages ?? [],
+    seo: seoSettings,
   });
 }
