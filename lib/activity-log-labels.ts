@@ -43,6 +43,7 @@ export function getEventModule(eventType: string) {
     if (eventType.startsWith("offer.")) return "Offers";
     if (eventType.startsWith("coupon.")) return "Coupons";
     if (eventType.startsWith("review.")) return "Reviews";
+    if (eventType.startsWith("form.")) return "Forms";
     return eventType.split(".")[0] || "System";
 }
 
@@ -260,6 +261,18 @@ export function getFriendlyActivityMessage(
 
         case "review.deleted":
             return `Review deleted${details?.customer_name ? `: ${String(details.customer_name)}` : ""}.`;
+
+        case "form.created":
+            return `Form created${details?.name ? `: ${String(details.name)}` : ""}.`;
+
+        case "form.updated":
+            return `Form updated${details?.name ? `: ${String(details.name)}` : ""}.`;
+
+        case "form.deleted":
+            return `Form deleted${details?.name ? `: ${String(details.name)}` : ""}.`;
+
+        case "form.submitted":
+            return `Form submitted${details?.form_name ? `: ${String(details.form_name)}` : ""}.`;
 
         default:
             return formatEventType(eventType);
