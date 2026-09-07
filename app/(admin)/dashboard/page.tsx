@@ -1,22 +1,23 @@
-
-
-
 import Link from "next/link";
 import {
+  Activity,
+  AlertCircle,
+  BarChart3,
+  Bell,
   CalendarClock,
+  CheckCircle2,
   Eye,
   MousePointerClick,
   Phone,
+  TrendingUp,
   Users,
   UserPlus,
-  Bell,
-  Activity,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { requirePermission } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase-server";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type ActivityRow = {
   id: string;
@@ -36,7 +37,28 @@ type ActivityRow = {
 
 type WebsiteEventRow = {
   event_type: string;
+  path: string;
+  label: string | null;
   visitor_id: string | null;
+  created_at: string;
+};
+
+type LeadRow = {
+  id: string;
+  name: string;
+  phone: string;
+  source: string | null;
+  status: string | null;
+  created_at: string;
+};
+
+type AppointmentRow = {
+  id: string;
+  customer_name: string;
+  appointment_date: string;
+  appointment_time: string;
+  status: string;
+  created_at: string;
 };
 
 function getActorName(profile: ActivityRow["profiles"]) {
@@ -48,46 +70,109 @@ function readableEvent(eventType: string) {
   return eventType.replaceAll("_", " ").replaceAll(".", " ");
 }
 
+function percentage(value: number, total: number) {
+  if (!total) return 0;
+  return Math.round((value / total) * 100);
+}
+
+function getStartOfTodayIso() {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date.toISOString();
+}
+
+function getThirtyDaysAgoIso() {
+  const date = new Date();
+  date.setDate(date.getDate() - 30);
+  return date.toISOString();
+}
+
+function MetricCard({
+  title,
+  value,
+  note,
+  href,
+  icon: Icon,
+}: {
+  title: string;
+  value: string | number;
+  note: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <Link href={href}>
+      <Card className="h-full transition hover:bg-muted/40">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm">{title}</CardTitle>
+          <Icon className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+
+        <CardContent>
+          <p className="text-2xl font-bold">{value}</p>
+          <p className="text-xs text-muted-foreground">{note}</p>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
 export default async function DashboardPage() {
   await requirePermission("dashboard.view");
 
   const supabase = await createClient();
 
-  const today = new Date().toISOString().slice(0, 10);
-  const last30Days = new Date();
-  last30Days.setDate(last30Days.getDate() - 30);
+  const todayIso = getStartOfTodayIso();
+  const last30DaysIso = getThirtyDaysAgoIso();
 
   const [
     { count: leadsCount },
     { count: customersCount },
     { count: appointmentsCount },
     { count: pendingAppointmentsCount },
-    { count: todayLeadsCount },
     { count: unreadNotificationsCount },
+    { data: todayLeads },
+    { data: todayAppointments },
     { data: websiteEvents },
     { data: recentActivity },
   ] = await Promise.all([
     supabase.from("leads").select("id", { count: "exact", head: true }),
+
     supabase.from("customers").select("id", { count: "exact", head: true }),
+
     supabase.from("appointments").select("id", { count: "exact", head: true }),
+
     supabase
       .from("appointments")
       .select("id", { count: "exact", head: true })
       .eq("status", "pending"),
-    supabase
-      .from("leads")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", `${today}T00:00:00`)
-      .lte("created_at", `${today}T23:59:59`),
+
     supabase
       .from("notifications")
       .select("id", { count: "exact", head: true })
       .is("read_at", null),
+
+    supabase
+      .from("leads")
+      .select("id, name, phone, source, status, created_at")
+      .gte("created_at", todayIso)
+      .order("created_at", { ascending: false })
+      .limit(5),
+
+    supabase
+      .from("appointments")
+      .select("id, customer_name, appointment_date, appointment_time, status, created_at")
+      .gte("created_at", todayIso)
+      .order("created_at", { ascending: false })
+      .limit(5),
+
     supabase
       .from("website_events")
-      .select("event_type, visitor_id")
-      .gte("created_at", last30Days.toISOString())
+      .select("event_type, path, label, visitor_id, created_at")
+      .gte("created_at", last30DaysIso)
+      .order("created_at", { ascending: false })
       .limit(5000),
+
     supabase
       .from("audit_logs")
       .select(
@@ -105,104 +190,135 @@ export default async function DashboardPage() {
       .limit(8),
   ]);
 
-  const activities = (recentActivity ?? []) as ActivityRow[];
+  const leadsToday = (todayLeads ?? []) as LeadRow[];
+  const appointmentsToday = (todayAppointments ?? []) as AppointmentRow[];
   const events = (websiteEvents ?? []) as WebsiteEventRow[];
+  const activities = (recentActivity ?? []) as ActivityRow[];
+
   const pageViews = events.filter((event) => event.event_type === "page_view").length;
   const visitors = new Set(events.map((event) => event.visitor_id).filter(Boolean)).size;
   const callClicks = events.filter((event) => event.event_type === "call_click").length;
   const whatsappClicks = events.filter((event) => event.event_type === "whatsapp_click").length;
   const bookingClicks = events.filter((event) => event.event_type === "booking_click").length;
+  const leadSubmits = events.filter((event) => event.event_type === "lead_submit").length;
+
+  const actionRequired =
+    leadsToday.length + appointmentsToday.length + (pendingAppointmentsCount ?? 0);
+
+  const clickRate = percentage(
+    callClicks + whatsappClicks + bookingClicks,
+    pageViews
+  );
 
   return (
     <div className="p-4 md:p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Live overview of leads, customers, appointments and team activity.
-        </p>
+      <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+        <div>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
+            Simple overview of leads, appointments, website activity and team actions.
+          </p>
+        </div>
+
+        <Link
+          href="/analytics"
+          className="inline-flex w-fit items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-muted"
+        >
+          <BarChart3 className="h-4 w-4" />
+          View Full Analytics
+        </Link>
       </div>
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Link href="/crm/leads">
-          <Card className="transition hover:bg-muted/40">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm">Total Leads</CardTitle>
-              <UserPlus className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent className="text-2xl font-bold">{leadsCount ?? 0}</CardContent>
-          </Card>
-        </Link>
+        <MetricCard
+          title="Total Leads"
+          value={leadsCount ?? 0}
+          note="All captured leads"
+          href="/crm/leads"
+          icon={UserPlus}
+        />
 
-        <Link href="/crm/customers">
-          <Card className="transition hover:bg-muted/40">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm">Customers</CardTitle>
-              <Users className="h-4 w-4 text-emerald-600" />
-            </CardHeader>
-            <CardContent className="text-2xl font-bold">{customersCount ?? 0}</CardContent>
-          </Card>
-        </Link>
+        <MetricCard
+          title="Customers"
+          value={customersCount ?? 0}
+          note="Saved customer records"
+          href="/crm/customers"
+          icon={Users}
+        />
 
-        <Link href="/appointments">
-          <Card className="transition hover:bg-muted/40">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm">Appointments</CardTitle>
-              <CalendarClock className="h-4 w-4 text-violet-600" />
-            </CardHeader>
-            <CardContent className="text-2xl font-bold">{appointmentsCount ?? 0}</CardContent>
-          </Card>
-        </Link>
+        <MetricCard
+          title="Appointments"
+          value={appointmentsCount ?? 0}
+          note={`${pendingAppointmentsCount ?? 0} pending approval`}
+          href="/appointments"
+          icon={CalendarClock}
+        />
 
-        <Link href="/crm/notifications">
-          <Card className="transition hover:bg-muted/40">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm">Unread Notifications</CardTitle>
-              <Bell className="h-4 w-4 text-amber-600" />
-            </CardHeader>
-            <CardContent className="text-2xl font-bold">
-              {unreadNotificationsCount ?? 0}
-            </CardContent>
-          </Card>
-        </Link>
+        <MetricCard
+          title="Unread Notifications"
+          value={unreadNotificationsCount ?? 0}
+          note="Needs attention"
+          href="/crm/notifications"
+          icon={Bell}
+        />
       </div>
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-2">
-        <Card>
+      <div className="mb-6 grid gap-3 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">Today</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              Today&apos;s Action Required
+            </CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <p className="text-sm text-muted-foreground">New Leads Today</p>
-              <p className="text-2xl font-bold text-blue-600">{todayLeadsCount ?? 0}</p>
-            </div>
 
-            <div>
+          <CardContent className="grid gap-3 sm:grid-cols-3">
+            <Link href="/crm/leads" className="rounded-md border p-3 hover:bg-muted">
+              <p className="text-sm text-muted-foreground">New Leads Today</p>
+              <p className="text-2xl font-bold text-blue-600">{leadsToday.length}</p>
+            </Link>
+
+            <Link href="/appointments" className="rounded-md border p-3 hover:bg-muted">
+              <p className="text-sm text-muted-foreground">New Appointments Today</p>
+              <p className="text-2xl font-bold text-violet-600">
+                {appointmentsToday.length}
+              </p>
+            </Link>
+
+            <Link href="/appointments" className="rounded-md border p-3 hover:bg-muted">
               <p className="text-sm text-muted-foreground">Pending Appointments</p>
               <p className="text-2xl font-bold text-amber-600">
                 {pendingAppointmentsCount ?? 0}
               </p>
-            </div>
+            </Link>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Quick Actions</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              Business Health
+            </CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-2 sm:grid-cols-2">
-            <Link className="rounded-md border p-3 text-sm hover:bg-muted" href="/crm/leads">
-              View Leads
-            </Link>
-            <Link className="rounded-md border p-3 text-sm hover:bg-muted" href="/appointments">
-              Manage Appointments
-            </Link>
-            <Link className="rounded-md border p-3 text-sm hover:bg-muted" href="/crm/customers">
-              View Customers
-            </Link>
-            <Link className="rounded-md border p-3 text-sm hover:bg-muted" href="/system/activity-logs">
-              Activity Logs
-            </Link>
+
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-muted-foreground">Today focus</span>
+              <Badge variant={actionRequired > 0 ? "default" : "outline"}>
+                {actionRequired > 0 ? "Needs Review" : "All Clear"}
+              </Badge>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-muted-foreground">Website click rate</span>
+              <span className="text-sm font-medium">{clickRate}%</span>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-muted-foreground">Lead submits tracked</span>
+              <span className="text-sm font-medium">{leadSubmits}</span>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -212,104 +328,156 @@ export default async function DashboardPage() {
           <div>
             <h2 className="text-lg font-semibold">Website Snapshot</h2>
             <p className="text-sm text-muted-foreground">
-              Last 30 days visits and high-intent clicks.
+              Last 30 days website visits and high-intent clicks.
             </p>
           </div>
+
           <Link className="text-sm text-primary hover:underline" href="/analytics">
-            View analytics
+            Details
           </Link>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <Link href="/analytics">
-            <Card className="transition hover:bg-muted/40">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm">Page Views</CardTitle>
-                <Eye className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent className="text-2xl font-bold">{pageViews}</CardContent>
-            </Card>
-          </Link>
+          <MetricCard
+            title="Page Views"
+            value={pageViews}
+            note="Website pages opened"
+            href="/analytics"
+            icon={Eye}
+          />
 
-          <Link href="/analytics">
-            <Card className="transition hover:bg-muted/40">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm">Visitors</CardTitle>
-                <Users className="h-4 w-4 text-emerald-600" />
-              </CardHeader>
-              <CardContent className="text-2xl font-bold">{visitors}</CardContent>
-            </Card>
-          </Link>
+          <MetricCard
+            title="Visitors"
+            value={visitors}
+            note="Unique tracked visitors"
+            href="/analytics"
+            icon={Users}
+          />
 
-          <Link href="/analytics">
-            <Card className="transition hover:bg-muted/40">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm">Call Clicks</CardTitle>
-                <Phone className="h-4 w-4 text-amber-600" />
-              </CardHeader>
-              <CardContent className="text-2xl font-bold">{callClicks}</CardContent>
-            </Card>
-          </Link>
+          <MetricCard
+            title="Call Clicks"
+            value={callClicks}
+            note="People tapped call"
+            href="/analytics"
+            icon={Phone}
+          />
 
-          <Link href="/analytics">
-            <Card className="transition hover:bg-muted/40">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm">WhatsApp Clicks</CardTitle>
-                <MousePointerClick className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent className="text-2xl font-bold">{whatsappClicks}</CardContent>
-            </Card>
-          </Link>
+          <MetricCard
+            title="WhatsApp Clicks"
+            value={whatsappClicks}
+            note="People opened WhatsApp"
+            href="/analytics"
+            icon={MousePointerClick}
+          />
 
-          <Link href="/analytics">
-            <Card className="transition hover:bg-muted/40">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm">Booking Clicks</CardTitle>
-                <CalendarClock className="h-4 w-4 text-violet-600" />
-              </CardHeader>
-              <CardContent className="text-2xl font-bold">{bookingClicks}</CardContent>
-            </Card>
-          </Link>
+          <MetricCard
+            title="Booking Clicks"
+            value={bookingClicks}
+            note="People showed booking intent"
+            href="/analytics"
+            icon={CalendarClock}
+          />
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Activity className="h-4 w-4" />
-            Recent Activity
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {activities.map((activity) => (
-            <div
-              key={activity.id}
-              className="flex flex-col gap-1 border-b pb-3 last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div>
+      <div className="grid gap-3 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Quick Actions</CardTitle>
+          </CardHeader>
+
+          <CardContent className="grid gap-2">
+            <Link className="rounded-md border p-3 text-sm hover:bg-muted" href="/crm/leads">
+              View Leads
+            </Link>
+
+            <Link className="rounded-md border p-3 text-sm hover:bg-muted" href="/appointments">
+              Manage Appointments
+            </Link>
+
+            <Link className="rounded-md border p-3 text-sm hover:bg-muted" href="/crm/customers">
+              View Customers
+            </Link>
+
+            <Link className="rounded-md border p-3 text-sm hover:bg-muted" href="/system/activity-logs">
+              Activity Logs
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Today&apos;s Latest Leads</CardTitle>
+          </CardHeader>
+
+          <CardContent className="space-y-3">
+            {leadsToday.map((lead) => (
+              <Link
+                key={lead.id}
+                href={`/crm/leads/${lead.id}`}
+                className="block rounded-md border p-3 hover:bg-muted"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{lead.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{lead.phone}</p>
+                  </div>
+
+                  <Badge variant="outline" className="capitalize">
+                    {lead.source || "manual"}
+                  </Badge>
+                </div>
+              </Link>
+            ))}
+
+            {leadsToday.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No new leads today.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Activity className="h-4 w-4" />
+              Recent Activity
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="space-y-3">
+            {activities.map((activity) => (
+              <div
+                key={activity.id}
+                className="border-b pb-3 last:border-0 last:pb-0"
+              >
                 <p className="text-sm font-medium capitalize">
                   {readableEvent(activity.event_type)}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {getActorName(activity.profiles)}
-                </p>
+
+                <div className="mt-1 flex items-center justify-between gap-3">
+                  <p className="truncate text-xs text-muted-foreground">
+                    {getActorName(activity.profiles)}
+                  </p>
+
+                  <Badge variant="outline">
+                    {formatDistanceToNow(new Date(activity.created_at), {
+                      addSuffix: true,
+                    })}
+                  </Badge>
+                </div>
               </div>
+            ))}
 
-              <Badge variant="outline">
-                {formatDistanceToNow(new Date(activity.created_at), {
-                  addSuffix: true,
-                })}
-              </Badge>
-            </div>
-          ))}
-
-          {activities.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              No recent activity yet.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+            {activities.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No recent activity yet.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
