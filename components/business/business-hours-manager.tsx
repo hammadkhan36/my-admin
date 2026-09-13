@@ -1,5 +1,6 @@
 "use client";
 
+import {useActionState} from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2, Save } from "lucide-react";
 import { updateBusinessHours } from "@/app/(admin)/business/hours/actions";
@@ -15,6 +16,8 @@ export type BusinessHourRow = {
   day_name: string;
   opens_at: string | null;
   closes_at: string | null;
+  break_starts_at: string | null;
+  break_ends_at: string | null;
   is_closed: boolean;
   is_24h: boolean;
 };
@@ -40,6 +43,7 @@ function SaveButton() {
 }
 
 export function BusinessHoursManager({ hours }: { hours: BusinessHourRow[] }) {
+  const [state, action] = useActionState(updateBusinessHours, {success:false,message:""});
   return (
     <div className="p-4 md:p-6">
       <div className="mb-6">
@@ -54,11 +58,12 @@ export function BusinessHoursManager({ hours }: { hours: BusinessHourRow[] }) {
           <CardTitle>Weekly Schedule</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={updateBusinessHours} className="space-y-4">
+          <form action={action} className="space-y-4">
+            {state.message && <p role={state.success?"status":"alert"} className={state.success?"text-green-700":"text-red-600"}>{state.message}</p>}
             {hours.map((hour) => (
               <div
                 key={hour.id}
-                className="grid gap-3 rounded-md border p-3 md:grid-cols-[140px_1fr_1fr_auto_auto]"
+                className="grid gap-3 rounded-md border p-3 md:grid-cols-4"
               >
                 <input type="hidden" name="id" value={hour.id} />
 
@@ -84,6 +89,8 @@ export function BusinessHoursManager({ hours }: { hours: BusinessHourRow[] }) {
                   />
                 </div>
 
+                <div className="space-y-1"><Label htmlFor={`break-start-${hour.id}`}>Break starts</Label><Input id={`break-start-${hour.id}`} name="break_starts_at" type="time" defaultValue={hour.break_starts_at?.slice(0,5)??""}/></div>
+                <div className="space-y-1"><Label htmlFor={`break-end-${hour.id}`}>Break ends</Label><Input id={`break-end-${hour.id}`} name="break_ends_at" type="time" defaultValue={hour.break_ends_at?.slice(0,5)??""}/></div>
                 <label className="flex items-center gap-2 text-sm">
                   <Switch
                     name={`is_closed_${hour.id}`}

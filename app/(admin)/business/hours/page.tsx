@@ -16,7 +16,7 @@ export default async function BusinessHoursPage() {
 
   const { data } = await supabase
     .from("business_hours")
-    .select("id, day_of_week, day_name, opens_at, closes_at, is_closed, is_24h")
+    .select("id, day_of_week, day_name, opens_at, closes_at, is_closed, is_24h, break_starts_at, break_ends_at")
     .order("day_of_week", { ascending: true });
 
   return <BusinessHoursManager hours={(data ?? []) as BusinessHourRow[]} />;

@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 
     supabase
       .from("business_hours")
-      .select("day_of_week, day_name, opens_at, closes_at, is_closed, is_24h")
+      .select("day_of_week, day_name, opens_at, closes_at, is_closed, is_24h, break_starts_at, break_ends_at")
       .order("day_of_week", { ascending: true }),
 
     supabase
