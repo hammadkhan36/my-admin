@@ -1,221 +1,372 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase-admin";
-import { createNotification } from "@/lib/notifications";
-import { logActivity } from "@/lib/activity-log";
 
-function ok(data: Record<string, unknown> = {}) {
-  return NextResponse.json({
-    success: true,
-    ...data,
+export const runtime = "nodejs";
+
+const optionalText = (max: number) =>
+  z.string().trim().max(max).optional().default("");
+
+const leadSchema = z.object({
+  name: z.string().trim().min(2).max(100),
+
+  phone: z
+    .string()
+    .trim()
+    .max(30)
+    .regex(/^\+?[\d\s().-]+$/)
+    .transform((value) => value.replace(/[\s().-]/g, ""))
+    .refine((value) => /^\+?\d{7,15}$/.test(value)),
+
+  email: optionalText(254).refine(
+    (value) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+  ),
+
+  service: optionalText(150),
+  message: optionalText(2000),
+  page_url: optionalText(2048),
+  referrer: optionalText(2048),
+  utm_source: optionalText(200),
+  utm_medium: optionalText(200),
+  utm_campaign: optionalText(200),
+});
+
+type LeadInput = z.infer<typeof leadSchema>;
+type AdminClient = ReturnType<typeof createAdminClient>;
+
+function reply(
+  data: Record<string, unknown>,
+  status = 200
+) {
+  return NextResponse.json(data, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+    },
   });
 }
 
-function fail(message: string, status = 400) {
-  return NextResponse.json(
-    {
-      success: false,
-      error: message,
-    },
-    { status }
-  );
+function fail(error: string, status: number) {
+  return reply({ success: false, error }, status);
 }
 
-function cleanPhone(phone: string) {
-  return phone.replace(/[^\d+]/g, "");
+function safePageUrl(value: string): string | null {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+
+    if (!["https:", "http:"].includes(url.protocol)) {
+      return null;
+    }
+
+    // Exclude credentials, query parameters and fragments.
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return null;
+  }
 }
 
-function asString(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
+async function readBody(request: NextRequest): Promise<unknown> {
+  const reader = request.body?.getReader();
+
+  if (!reader) {
+    throw new Error("INVALID_BODY");
+  }
+
+  const decoder = new TextDecoder();
+  let bytes = 0;
+  let text = "";
+
+  try {
+    while (true) {
+      const chunk = await reader.read();
+
+      if (chunk.done) break;
+
+      bytes += chunk.value.byteLength;
+
+      if (bytes > 16_000) {
+        await reader.cancel();
+        throw new Error("BODY_TOO_LARGE");
+      }
+
+      text += decoder.decode(chunk.value, { stream: true });
+    }
+
+    text += decoder.decode();
+
+    return JSON.parse(text);
+  } finally {
+    reader.releaseLock();
+  }
 }
 
-async function getOrCreateCustomer(input: {
-  name: string;
-  phone: string;
-  email: string | null;
-}) {
-  const supabase = createAdminClient();
-  const phone = cleanPhone(input.phone);
-
-  const { data: existing, error: existingError } = await supabase
+async function getOrCreateCustomer(
+  admin: AdminClient,
+  input: LeadInput
+): Promise<string> {
+  const { data: existing, error: lookupError } = await admin
     .from("customers")
     .select("id")
-    .eq("phone", phone)
+    .eq("phone", input.phone)
     .maybeSingle();
 
-  if (existingError) throw new Error(existingError.message);
+  if (lookupError) {
+    throw new Error("CUSTOMER_LOOKUP_FAILED");
+  }
 
   if (existing) {
-    await supabase
-      .from("customers")
-      .update({
-        name: input.name,
-        email: input.email,
-        last_seen_at: new Date().toISOString(),
-      })
-      .eq("id", existing.id);
-
+    // Public enquiries must not overwrite verified CRM details.
     return existing.id as string;
   }
 
-  const { data, error } = await supabase
+  const { data: created, error: insertError } = await admin
     .from("customers")
     .insert({
       name: input.name,
-      phone,
-      email: input.email,
+      phone: input.phone,
+      email: input.email || null,
       last_seen_at: new Date().toISOString(),
     })
     .select("id")
     .single();
 
-  if (error) throw new Error(error.message);
+  if (!insertError && created) {
+    return created.id as string;
+  }
 
-  return data.id as string;
+  // Another request may have inserted this phone concurrently.
+  // This recovery depends on a database unique constraint.
+  if (insertError?.code === "23505") {
+    const { data: concurrent, error: retryError } = await admin
+      .from("customers")
+      .select("id")
+      .eq("phone", input.phone)
+      .maybeSingle();
+
+    if (!retryError && concurrent) {
+      return concurrent.id as string;
+    }
+  }
+
+  throw new Error("CUSTOMER_CREATE_FAILED");
+}
+
+async function runFollowUps(
+  leadId: string,
+  customerId: string,
+  seenAt: string
+) {
+  const admin = createAdminClient();
+
+  const tasks = [
+    {
+      name: "customer-last-seen",
+      run: async () => {
+        const { error } = await admin
+          .from("customers")
+          .update({ last_seen_at: seenAt })
+          .eq("id", customerId)
+          .or(`last_seen_at.is.null,last_seen_at.lt.${seenAt}`);
+
+        if (error) throw error;
+      },
+    },
+    {
+      name: "lead-history",
+      run: async () => {
+        const { error } = await admin
+          .from("lead_status_history")
+          .insert({
+            lead_id: leadId,
+            old_status: null,
+            new_status: "new",
+            note: "Website lead submitted",
+          });
+
+        if (error) throw error;
+      },
+    },
+    {
+      name: "activity-log",
+      run: async () => {
+        const { error } = await admin
+          .from("audit_logs")
+          .insert({
+            actor_id: null,
+            event_type: "lead.created",
+            target_type: "lead",
+            target_id: leadId,
+            details: {
+              source: "website",
+            },
+          });
+
+        if (error) throw error;
+      },
+    },
+    {
+      name: "notification",
+      run: async () => {
+        const { error } = await admin
+          .from("notifications")
+          .insert({
+            title: "New website lead",
+            message: "A new website enquiry has been received.",
+            type: "info",
+            target_url: `/crm/leads/${leadId}`,
+            recipient_id: null,
+            actor_id: null,
+          });
+
+        if (error) throw error;
+      },
+    },
+  ];
+
+  await Promise.all(
+    tasks.map(async (task) => {
+      try {
+        await task.run();
+      } catch {
+        // Do not log enquiry text, contact details or secrets.
+        console.error("[website-leads] Follow-up failed", {
+          task: task.name,
+          leadId,
+        });
+      }
+    })
+  );
 }
 
 export async function POST(request: NextRequest) {
-  const apiKey = request.headers.get("x-api-key");
+  const expectedKey = process.env.WEBSITE_LEAD_API_KEY;
 
-  if (!process.env.WEBSITE_LEAD_API_KEY || apiKey !== process.env.WEBSITE_LEAD_API_KEY) {
+  if (!expectedKey) {
+    return fail("Lead service is unavailable.", 503);
+  }
+
+  if (request.headers.get("x-api-key") !== expectedKey) {
     return fail("Unauthorized request.", 401);
   }
 
+  const contentType = request.headers.get("content-type") ?? "";
+
+  if (!contentType.toLowerCase().startsWith("application/json")) {
+    return fail("JSON request required.", 415);
+  }
+
+  let raw: unknown;
+
   try {
-    const body = await request.json();
+    raw = await readBody(request);
+  } catch (error) {
+    const tooLarge =
+      error instanceof Error &&
+      error.message === "BODY_TOO_LARGE";
 
-    const name = asString(body.name || body.customer_name);
-    const phone = asString(body.phone || body.customer_phone);
-    const email = asString(body.email || body.customer_email) || null;
-    const service = asString(body.service) || null;
-    const message = asString(body.message || body.note) || null;
+    return fail(
+      tooLarge ? "Request is too large." : "Invalid JSON request.",
+      tooLarge ? 413 : 400
+    );
+  }
 
-    const pageUrl = asString(body.page_url) || null;
-    const referrer = asString(body.referrer) || null;
-    const utmSource = asString(body.utm_source) || null;
-    const utmMedium = asString(body.utm_medium) || null;
-    const utmCampaign = asString(body.utm_campaign) || null;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return fail("Invalid request.", 400);
+  }
 
-    if (!name) return fail("Name is required.");
-    if (!phone) return fail("Phone is required.");
+  const body = raw as Record<string, unknown>;
 
-    const supabase = createAdminClient();
+  // Preserve field aliases supported by the existing API.
+  const parsed = leadSchema.safeParse({
+    ...body,
+    name: body.name ?? body.customer_name,
+    phone: body.phone ?? body.customer_phone,
+    email: body.email ?? body.customer_email ?? "",
+    service: body.service ?? "",
+    message: body.message ?? body.note ?? "",
+    page_url: body.page_url ?? "",
+    referrer: body.referrer ?? "",
+    utm_source: body.utm_source ?? "",
+    utm_medium: body.utm_medium ?? "",
+    utm_campaign: body.utm_campaign ?? "",
+  });
 
-    const customerId = await getOrCreateCustomer({
-      name,
-      phone,
-      email,
-    });
+  if (!parsed.success) {
+    return fail("Please check your contact details and message.", 400);
+  }
 
-    const { data: lead, error } = await supabase
+  const input = parsed.data;
+  const seenAt = new Date().toISOString();
+
+  let customerId: string;
+  let leadId: string;
+
+  try {
+    const admin = createAdminClient();
+
+    customerId = await getOrCreateCustomer(admin, input);
+
+    const { data: lead, error } = await admin
       .from("leads")
       .insert({
         customer_id: customerId,
-        name,
-        phone: cleanPhone(phone),
-        email,
-        service,
-        message,
+        name: input.name,
+        phone: input.phone,
+        email: input.email || null,
+        service: input.service || null,
+        message: input.message || null,
         source: "website",
         status: "new",
-        page_url: pageUrl,
-        referrer,
-        utm_source: utmSource,
-        utm_medium: utmMedium,
-        utm_campaign: utmCampaign,
+        page_url: safePageUrl(input.page_url),
+        referrer: safePageUrl(input.referrer),
+        utm_source: input.utm_source || null,
+        utm_medium: input.utm_medium || null,
+        utm_campaign: input.utm_campaign || null,
       })
       .select("id")
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error || !lead) {
+      throw new Error("LEAD_CREATE_FAILED");
+    }
 
-    await supabase.from("lead_status_history").insert({
-      lead_id: lead.id,
-      old_status: null,
-      new_status: "new",
-      note: "Website lead submitted",
+    leadId = lead.id as string;
+  } catch {
+    console.error("[website-leads] Submission was not confirmed.");
+
+    return fail(
+      "We could not confirm your submission. Please contact the business.",
+      500
+    );
+  }
+
+  // The lead is already saved. Ancillary work must not change
+  // the successful submission response.
+  try {
+    after(async () => {
+      try {
+        await runFollowUps(leadId, customerId, seenAt);
+      } catch {
+        console.error("[website-leads] Follow-ups unavailable", {
+          leadId,
+        });
+      }
     });
-
-    await logActivity({
-      eventType: "lead.created",
-      targetType: "lead",
-      targetId: lead.id,
-      details: {
-        name,
-        source: "website",
-        page_url: pageUrl,
-        utm_source: utmSource,
-      },
+  } catch {
+    console.error("[website-leads] Could not schedule follow-ups", {
+      leadId,
     });
+  }
 
-    await createNotification({
-      title: "New website lead",
-      message: `${name} submitted a lead from the website.`,
-      type: "info",
-      targetUrl: `/crm/leads/${lead.id}`,
-    });
-
-    return ok({
-      lead_id: lead.id,
+  return reply(
+    {
+      success: true,
+      lead_id: leadId,
       customer_id: customerId,
       message: "Lead submitted successfully.",
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Lead request failed.";
-    return fail(message, 500);
-  }
+    },
+    201
+  );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Step 3: Website Example Code
-
-// Business website me lead form submit ke liye:
-
-// async function submitLead() {
-//   const response = await fetch("https://your-admin-domain.com/api/public/leads", {
-//     method: "POST",
-//     headers: {
-//       "Content-Type": "application/json",
-//       "x-api-key": process.env.WEBSITE_LEAD_API_KEY!,
-//     },
-//     body: JSON.stringify({
-//       name: "Ali Khan",
-//       phone: "+923001234567",
-//       email: "ali@example.com",
-//       service: "Website Design",
-//       message: "I need pricing details.",
-//       page_url: window.location.href,
-//       referrer: document.referrer,
-//       utm_source: "google",
-//       utm_medium: "organic",
-//       utm_campaign: "homepage"
-//     }),
-//   });
-
-//   const result = await response.json();
-
-//   if (!response.ok) {
-//     alert(result.error || "Lead submit failed.");
-//     return;
-//   }
-
-//   alert(result.message || "Lead submitted.");
-// }
-
-// Production me is ko direct browser se call na karna behtar hai. Website ke apne server route se call karna, taake secret key frontend me expose na ho.
