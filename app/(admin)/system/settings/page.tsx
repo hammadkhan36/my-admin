@@ -1,14 +1,26 @@
-
-
-
-
-
 import Link from "next/link";
-import { Bell, Building2, CalendarClock, ShieldCheck, User, Users } from "lucide-react";
-import { requirePermission, requireProfile } from "@/lib/auth/server";
+import {
+  Bell,
+  Building2,
+  CalendarClock,
+  ShieldCheck,
+  User,
+  Users,
+} from "lucide-react";
+
+import {
+  requirePermission,
+  requireProfile,
+} from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase-server";
+import { CommunicationsForm } from "@/components/settings/communications-form";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default async function SettingsPage() {
   await requirePermission("settings.view");
@@ -21,10 +33,13 @@ export default async function SettingsPage() {
     { data: subscription },
     { count: staffCount },
     { count: unreadCount },
+    { data: communicationSettings },
   ] = await Promise.all([
     supabase
       .from("business_settings")
-      .select("business_name, short_name, contact_email, contact_phone, theme_color")
+      .select(
+        "business_name, short_name, contact_email, contact_phone, theme_color"
+      )
       .limit(1)
       .maybeSingle(),
 
@@ -34,13 +49,28 @@ export default async function SettingsPage() {
       .limit(1)
       .maybeSingle(),
 
-    supabase.from("profiles").select("id", { count: "exact", head: true }),
+    supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true }),
 
     supabase
       .from("notifications")
       .select("id", { count: "exact", head: true })
       .is("read_at", null),
+
+    supabase
+      .from("communication_settings")
+      .select("*")
+      .eq("id", true)
+      .single(),
   ]);
+
+  const emailConfigured = Boolean(
+    process.env.RESEND_API_KEY &&
+    process.env.RESEND_FROM &&
+    process.env.ADMIN_SITE_URL &&
+    process.env.CRON_SECRET
+  );
 
   const shortcuts = [
     {
@@ -84,6 +114,21 @@ export default async function SettingsPage() {
         </p>
       </div>
 
+      {communicationSettings ? (
+        <CommunicationsForm
+          settings={communicationSettings}
+          configured={emailConfigured}
+        />
+      ) : (
+        <p
+          role="alert"
+          className="mb-6 rounded-md border border-red-200 p-4 text-red-700"
+        >
+          Communication settings unavailable. Refresh the page
+          or check your account permissions.
+        </p>
+      )}
+
       <div className="mb-6 grid gap-3 lg:grid-cols-3">
         <Card>
           <CardHeader>
@@ -92,10 +137,13 @@ export default async function SettingsPage() {
               My Account
             </CardTitle>
           </CardHeader>
+
           <CardContent className="space-y-2 text-sm">
             <div>
               <p className="text-muted-foreground">Name</p>
-              <p className="font-medium">{profile.full_name || "Not set"}</p>
+              <p className="font-medium">
+                {profile.full_name || "Not set"}
+              </p>
             </div>
 
             <div>
@@ -105,58 +153,96 @@ export default async function SettingsPage() {
 
             <div>
               <p className="text-muted-foreground">Role</p>
-              <Badge className="capitalize">{profile.role}</Badge>
+              <Badge className="capitalize">
+                {profile.role}
+              </Badge>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Business</CardTitle>
+            <CardTitle className="text-base">
+              Business
+            </CardTitle>
           </CardHeader>
+
           <CardContent className="space-y-2 text-sm">
             <div>
-              <p className="text-muted-foreground">Business Name</p>
-              <p className="font-medium">{businessSettings?.business_name || "Not set"}</p>
+              <p className="text-muted-foreground">
+                Business Name
+              </p>
+              <p className="font-medium">
+                {businessSettings?.business_name || "Not set"}
+              </p>
             </div>
 
             <div>
-              <p className="text-muted-foreground">Short Name</p>
-              <p className="font-medium">{businessSettings?.short_name || "Not set"}</p>
+              <p className="text-muted-foreground">
+                Short Name
+              </p>
+              <p className="font-medium">
+                {businessSettings?.short_name || "Not set"}
+              </p>
             </div>
 
             <div>
               <p className="text-muted-foreground">Phone</p>
-              <p className="font-medium">{businessSettings?.contact_phone || "Not set"}</p>
+              <p className="font-medium">
+                {businessSettings?.contact_phone || "Not set"}
+              </p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">System</CardTitle>
+            <CardTitle className="text-base">
+              System
+            </CardTitle>
           </CardHeader>
+
           <CardContent className="space-y-2 text-sm">
             <div>
-              <p className="text-muted-foreground">Subscription</p>
-              <p className="font-medium capitalize">{subscription?.plan || "Not set"}</p>
+              <p className="text-muted-foreground">
+                Subscription
+              </p>
+              <p className="font-medium capitalize">
+                {subscription?.plan || "Not set"}
+              </p>
             </div>
 
             <div>
               <p className="text-muted-foreground">Status</p>
-              <Badge variant={subscription?.is_active ? "default" : "destructive"}>
-                {subscription?.is_active ? "Active" : "Inactive"}
+              <Badge
+                variant={
+                  subscription?.is_active
+                    ? "default"
+                    : "destructive"
+                }
+              >
+                {subscription?.is_active
+                  ? "Active"
+                  : "Inactive"}
               </Badge>
             </div>
 
             <div>
-              <p className="text-muted-foreground">Unread Notifications</p>
-              <p className="font-medium">{unreadCount ?? 0}</p>
+              <p className="text-muted-foreground">
+                Unread Notifications
+              </p>
+              <p className="font-medium">
+                {unreadCount ?? 0}
+              </p>
             </div>
 
             <div>
-              <p className="text-muted-foreground">Team Members</p>
-              <p className="font-medium">{staffCount ?? 0}</p>
+              <p className="text-muted-foreground">
+                Team Members
+              </p>
+              <p className="font-medium">
+                {staffCount ?? 0}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -175,8 +261,11 @@ export default async function SettingsPage() {
                     {item.title}
                   </CardTitle>
                 </CardHeader>
+
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">{item.description}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {item.description}
+                  </p>
                 </CardContent>
               </Card>
             </Link>
