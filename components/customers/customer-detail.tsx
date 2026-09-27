@@ -4,18 +4,25 @@ import { useActionState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Save } from "lucide-react";
 import { toast } from "sonner";
+
 import { updateCustomer } from "@/app/(admin)/crm/customers/actions";
+import { ContactInput } from "@/components/contacts/contact-input";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export type CustomerDetailRow = {
   id: string;
   name: string;
-  phone: string;
+  phone: string | null;
   email: string | null;
   address: string | null;
   notes: string | null;
@@ -43,7 +50,10 @@ export function CustomerDetail({
   customer: CustomerDetailRow;
   activities: CustomerActivityRow[];
 }) {
-  const [state, action] = useActionState(updateCustomer, initialState);
+  const [state, action, pending] = useActionState(
+    updateCustomer,
+    initialState
+  );
 
   useEffect(() => {
     if (!state.message) return;
@@ -55,25 +65,34 @@ export function CustomerDetail({
     }
   }, [state]);
 
+  const tags = customer.tags ?? [];
+
   return (
     <div className="p-4 md:p-6">
       <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <Link href="/crm/customers">
-            <Button variant="ghost" size="sm" className="mb-2">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="mb-2"
+          >
+            <Link href="/crm/customers">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Customers
-            </Button>
-          </Link>
+            </Link>
+          </Button>
 
-          <h1 className="text-2xl font-bold">{customer.name}</h1>
+          <h1 className="text-2xl font-bold">
+            {customer.name}
+          </h1>
           <p className="text-sm text-muted-foreground">
             Customer profile, notes and activity.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {customer.tags.map((tag) => (
+          {tags.map((tag) => (
             <Badge key={tag} variant="outline">
               {tag}
             </Badge>
@@ -86,57 +105,136 @@ export function CustomerDetail({
           <CardHeader>
             <CardTitle>Edit Customer</CardTitle>
           </CardHeader>
+
           <CardContent>
-            <form action={action} className="grid gap-4 md:grid-cols-2">
-              <input type="hidden" name="id" value={customer.id} />
+            <form
+              action={action}
+              className="grid gap-4 md:grid-cols-2"
+            >
+              <input
+                type="hidden"
+                name="id"
+                value={customer.id}
+              />
 
               <div className="space-y-2">
-                <Label htmlFor="name">Customer Name</Label>
-                <Input id="name" name="name" defaultValue={customer.name} required />
+                <Label htmlFor="edit-customer-name">
+                  Customer Name
+                </Label>
+                <Input
+                  id="edit-customer-name"
+                  name="name"
+                  defaultValue={customer.name}
+                  minLength={2}
+                  maxLength={100}
+                  required
+                />
                 {state.errors?.name?.map((error) => (
-                  <p key={error} className="text-xs text-destructive">
+                  <p
+                    key={error}
+                    className="text-xs text-destructive"
+                  >
                     {error}
                   </p>
                 ))}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" name="phone" defaultValue={customer.phone} required />
+                <Label htmlFor="edit-customer-phone">
+                  Phone
+                </Label>
+                <ContactInput
+                  id="edit-customer-phone"
+                  name="phone"
+                  kind="phone"
+                  defaultValue={customer.phone ?? ""}
+                  autoComplete="tel"
+                />
                 {state.errors?.phone?.map((error) => (
-                  <p key={error} className="text-xs text-destructive">
+                  <p
+                    key={error}
+                    className="text-xs text-destructive"
+                  >
                     {error}
                   </p>
                 ))}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" defaultValue={customer.email ?? ""} />
+                <Label htmlFor="edit-customer-email">
+                  Email
+                </Label>
+                <ContactInput
+                  id="edit-customer-email"
+                  name="email"
+                  kind="email"
+                  defaultValue={customer.email ?? ""}
+                  autoComplete="email"
+                />
                 {state.errors?.email?.map((error) => (
-                  <p key={error} className="text-xs text-destructive">
+                  <p
+                    key={error}
+                    className="text-xs text-destructive"
+                  >
                     {error}
                   </p>
                 ))}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Input id="address" name="address" defaultValue={customer.address ?? ""} />
+                <Label htmlFor="edit-customer-address">
+                  Address
+                </Label>
+                <Input
+                  id="edit-customer-address"
+                  name="address"
+                  defaultValue={customer.address ?? ""}
+                />
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="tags">Tags</Label>
-                <Input id="tags" name="tags" defaultValue={customer.tags.join(", ")} />
+                <Label htmlFor="edit-customer-tags">
+                  Tags
+                </Label>
+                <Input
+                  id="edit-customer-tags"
+                  name="tags"
+                  defaultValue={tags.join(", ")}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Separate tags with commas.
+                </p>
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Input id="notes" name="notes" defaultValue={customer.notes ?? ""} />
+                <Label htmlFor="edit-customer-notes">
+                  Notes
+                </Label>
+                <Input
+                  id="edit-customer-notes"
+                  name="notes"
+                  defaultValue={customer.notes ?? ""}
+                />
               </div>
+
+              {state.message && (
+                <p
+                  role="status"
+                  className={`text-sm md:col-span-2 ${
+                    state.success
+                      ? "text-green-700"
+                      : "text-destructive"
+                  }`}
+                >
+                  {state.message}
+                </p>
+              )}
 
               <div className="md:col-span-2">
-                <PendingSubmitButton pendingText="Saving...">
+                <PendingSubmitButton
+                  disabled={pending}
+                  pendingText="Saving..."
+                >
                   <Save className="mr-2 h-4 w-4" />
                   Save Customer
                 </PendingSubmitButton>
@@ -150,28 +248,45 @@ export function CustomerDetail({
             <CardHeader>
               <CardTitle>Summary</CardTitle>
             </CardHeader>
+
             <CardContent className="space-y-3 text-sm">
               <div>
-                <div className="text-muted-foreground">Phone</div>
-                <div className="font-medium">{customer.phone}</div>
-              </div>
-
-              <div>
-                <div className="text-muted-foreground">Email</div>
-                <div className="font-medium">{customer.email || "N/A"}</div>
-              </div>
-
-              <div>
-                <div className="text-muted-foreground">Created</div>
+                <div className="text-muted-foreground">
+                  Phone
+                </div>
                 <div className="font-medium">
-                  {new Date(customer.created_at).toLocaleString()}
+                  {customer.phone || "Not provided"}
                 </div>
               </div>
 
               <div>
-                <div className="text-muted-foreground">Last Updated</div>
+                <div className="text-muted-foreground">
+                  Email
+                </div>
+                <div className="break-all font-medium">
+                  {customer.email || "Not provided"}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-muted-foreground">
+                  Created
+                </div>
                 <div className="font-medium">
-                  {new Date(customer.updated_at).toLocaleString()}
+                  {new Date(
+                    customer.created_at
+                  ).toLocaleString()}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-muted-foreground">
+                  Last Updated
+                </div>
+                <div className="font-medium">
+                  {new Date(
+                    customer.updated_at
+                  ).toLocaleString()}
                 </div>
               </div>
             </CardContent>
@@ -181,12 +296,20 @@ export function CustomerDetail({
             <CardHeader>
               <CardTitle>Recent Activity</CardTitle>
             </CardHeader>
+
             <CardContent className="space-y-3">
               {activities.map((activity) => (
-                <div key={activity.id} className="border-b pb-3 last:border-0">
-                  <div className="text-sm font-medium">{activity.event_type}</div>
+                <div
+                  key={activity.id}
+                  className="border-b pb-3 last:border-0"
+                >
+                  <div className="text-sm font-medium">
+                    {activity.event_type}
+                  </div>
                   <div className="text-xs text-muted-foreground">
-                    {new Date(activity.created_at).toLocaleString()}
+                    {new Date(
+                      activity.created_at
+                    ).toLocaleString()}
                   </div>
                 </div>
               ))}
