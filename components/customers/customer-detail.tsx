@@ -9,7 +9,7 @@ import { updateCustomer } from "@/app/(admin)/crm/customers/actions";
 import { ContactInput } from "@/components/contacts/contact-input";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -71,17 +71,13 @@ export function CustomerDetail({
     <div className="p-4 md:p-6">
       <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="mb-2"
+          <Link
+            href="/crm/customers"
+            className={buttonVariants({ variant: "ghost", size: "sm", className: "mb-2" })}
           >
-            <Link href="/crm/customers">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Customers
-            </Link>
-          </Button>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Customers
+          </Link>
 
           <h1 className="text-2xl font-bold">
             {customer.name}
