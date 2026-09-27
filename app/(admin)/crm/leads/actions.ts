@@ -1,5 +1,6 @@
 "use server";
 
+import { resolveCustomer } from "@/lib/contacts/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requirePermission } from "@/lib/auth/server";
@@ -15,7 +16,7 @@ type LeadActionState = {
 
 const leadSchema = z.object({
     name: z.string().trim().min(2, "Name must contain at least 2 characters"),
-    phone: z.string().trim().min(6, "Phone number is required"),
+    phone: z.string().trim().max(30).default(""),
     email: z.string().trim().email("Enter a valid email").optional().or(z.literal("")),
     service: z.string().trim().optional(),
     message: z.string().trim().optional(),
@@ -25,64 +26,11 @@ const leadSchema = z.object({
 });
 
 function normalizePhone(phone: string) {
-    return phone.replace(/[^\d+]/g, "");
+    return phone.replace(/[\s().-]/g, "");
 }
 
-async function getOrCreateCustomer({
-    actorId,
-    name,
-    phone,
-    email,
-}: {
-    actorId: string;
-    name: string;
-    phone: string;
-    email?: string;
-}) {
-    const admin = createAdminClient();
-
-    const { data: existing } = await admin
-        .from("customers")
-        .select("id")
-        .eq("phone", phone)
-        .maybeSingle();
-
-    if (existing) {
-        await admin
-            .from("customers")
-            .update({
-                name,
-                email: email || null,
-                last_seen_at: new Date().toISOString(),
-            })
-            .eq("id", existing.id);
-
-        return existing.id as string;
-    }
-
-    const { data, error } = await admin
-        .from("customers")
-        .insert({
-            name,
-            phone,
-            email: email || null,
-            created_by: actorId,
-            last_seen_at: new Date().toISOString(),
-        })
-        .select("id")
-        .single();
-
-    if (error) throw new Error(error.message);
-
-    await logActivity({
-        actorId,
-        eventType: "customer.created",
-        targetType: "customer",
-        targetId: data.id,
-        details: { name, phone, source: "lead" },
-    });
-
-    return data.id as string;
+async function getOrCreateCustomer(input: { actorId: string; name: string; phone: string; email?: string }) {
+    return resolveCustomer(input);
 }
 
 export async function createLead(
@@ -93,10 +41,10 @@ export async function createLead(
 
     const result = leadSchema.safeParse({
         name: formData.get("name"),
-        phone: formData.get("phone"),
-        email: formData.get("email"),
-        service: formData.get("service"),
-        message: formData.get("message"),
+        phone: formData.get("phone") || "",
+        email: formData.get("email") || "",
+        service: formData.get("service") || "",
+        message: formData.get("message") || "",
         source: formData.get("source") || "manual",
         status: formData.get("status") || "new",
         priority: formData.get("priority") || "normal",
@@ -125,7 +73,7 @@ export async function createLead(
             .insert({
                 customer_id: customerId,
                 name: result.data.name,
-                phone,
+                phone: phone || null,
                 email: result.data.email || null,
                 service: result.data.service || null,
                 message: result.data.message || null,
@@ -144,6 +92,7 @@ export async function createLead(
             };
         }
 
+        try {
         await admin.from("lead_status_history").insert({
             lead_id: data.id,
             old_status: null,
@@ -158,7 +107,7 @@ export async function createLead(
             targetId: data.id,
             details: {
                 name: result.data.name,
-                phone,
+                phone: phone || null,
                 customer_id: customerId,
                 source: result.data.source,
             },
@@ -171,6 +120,8 @@ export async function createLead(
             targetUrl: `/crm/leads/${data.id}`,
             actorId: actor.id,
         });
+
+        } catch { console.error("[leads] Follow-up failed", { leadId: data.id }); }
 
         revalidatePath("/crm/leads");
         revalidatePath("/crm/customers");

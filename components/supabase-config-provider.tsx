@@ -31,7 +31,6 @@ type Subscription = {
   end_date: string | null;
   grace_period_days: number;
   is_active: boolean;
-  renewal_code: string | null;
 };
 
 type SupabaseConfigContextType = {
@@ -62,7 +61,7 @@ export function SupabaseConfigProvider({ children }: { children: React.ReactNode
       const { data: fs } = await supabase.from("feature_settings").select("*");
       const { data: sub } = await supabase
         .from("subscriptions")
-        .select("*")
+        .select("id,plan,start_date,end_date,grace_period_days,is_active")
         .limit(1)
         .single();
       if (bs) setBusinessSettings(bs);

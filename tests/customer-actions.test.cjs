@@ -10,6 +10,7 @@ function setup(options = {}) {
   const permissions = [];
   const refreshed = [];
   const db = {
+    async rpc() { return { data: "22222222-2222-4222-8222-222222222222", error: null }; },
     from(table) {
       if (table === 'communication_settings') return {
         select: () => ({ eq: () => ({ single: async () => ({
@@ -44,6 +45,7 @@ function setup(options = {}) {
         if (options.denied) throw new Error('Forbidden');
         return { id: 'actor-id' };
       } },
+      '@/lib/notifications': { createNotification: async () => { if (options.auditFailure) throw new Error('Notification unavailable'); } },
       '@/lib/activity-log': { logActivity: async () => { if (options.auditFailure) throw new Error('Audit unavailable'); } },
       ...additional,
     };
@@ -51,7 +53,7 @@ function setup(options = {}) {
     return exports;
   }
   const contact = load('lib/contacts/server.ts');
-  const actions = load('app/(admin)/crm/customers/actions.ts', { '@/lib/contacts/server': contact });
+  const actions = load(options.lead ? 'app/(admin)/crm/leads/actions.ts' : 'app/(admin)/crm/customers/actions.ts', { '@/lib/contacts/server': contact });
   return { actions, writes, permissions, refreshed };
 }
 
@@ -100,4 +102,25 @@ test('updating a missing customer does not report success', async () => {
   const result = await s.actions.updateCustomer({}, form({ id: '11111111-1111-4111-8111-111111111111' }));
   assert.equal(result.success, false);
   assert.match(result.message, /not found/);
+});
+
+
+test('email-only lead saves a nullable phone and links the resolved customer', async () => {
+  const s = setup({ lead: true });
+  const result = await s.actions.createLead({}, form());
+  assert.equal(result.success, true);
+  assert.equal(s.writes[0].phone, null);
+  assert.equal(s.writes[0].customer_id, '22222222-2222-4222-8222-222222222222');
+  assert.deepEqual(s.permissions, ['leads.create']);
+});
+
+test('lead without the configured primary contact is rejected', async () => {
+  const s = setup({ lead: true, mode: 'phone' });
+  assert.equal((await s.actions.createLead({}, form())).success, false);
+  assert.equal(s.writes.length, 0);
+});
+
+test('saved lead stays successful if notification/audit follow-up fails', async () => {
+  const s = setup({ lead: true, auditFailure: true });
+  assert.equal((await s.actions.createLead({}, form())).success, true);
 });

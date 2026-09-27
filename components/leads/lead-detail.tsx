@@ -16,7 +16,7 @@ export type LeadDetailRow = {
   id: string;
   customer_id: string | null;
   name: string;
-  phone: string;
+  phone: string | null;
   email: string | null;
   service: string | null;
   message: string | null;
@@ -29,13 +29,13 @@ export type LeadDetailRow = {
     | {
         id: string;
         name: string;
-        phone: string;
+        phone: string | null;
         email: string | null;
       }
     | {
         id: string;
         name: string;
-        phone: string;
+        phone: string | null;
         email: string | null;
       }[]
     | null;

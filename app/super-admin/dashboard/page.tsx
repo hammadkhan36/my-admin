@@ -37,7 +37,6 @@ type Subscription = {
   end_date: string | null;
   grace_period_days: number;
   is_active: boolean;
-  renewal_code: string | null;
 };
 
 export default async function SuperAdminDashboard() {
@@ -197,7 +196,7 @@ export default async function SuperAdminDashboard() {
               <CardContent>
                 {sub ? (
                   <form
-                    key={`subscription-${sub.id}-${sub.plan}-${sub.start_date}-${sub.end_date}-${sub.grace_period_days}-${sub.is_active}-${sub.renewal_code}`}
+                    key={`subscription-${sub.id}-${sub.plan}-${sub.start_date}-${sub.end_date}-${sub.grace_period_days}-${sub.is_active}`}
                     action={updateSubscriptionSettings}
                     className="space-y-6"
                   >
@@ -241,8 +240,8 @@ export default async function SuperAdminDashboard() {
                     <Separator />
 
                     <div className="space-y-2">
-                      <Label htmlFor="renewal_code">Renewal Code</Label>
-                      <Input id="renewal_code" name="renewal_code" defaultValue={sub.renewal_code ?? ""} />
+                      <Label htmlFor="renewal_code">New renewal code (leave blank to keep existing)</Label>
+                      <Input id="renewal_code" name="renewal_code" type="password" autoComplete="new-password" minLength={8} maxLength={72} />
                     </div>
 
                     <PendingSubmitButton pendingText="Saving subscription...">

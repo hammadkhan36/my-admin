@@ -1,4 +1,5 @@
 "use client";
+import { ContactInput } from "@/components/contacts/contact-input";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { ExternalLink, Plus, Search, Trash2 } from "lucide-react";
@@ -28,7 +29,7 @@ export type LeadRow = {
     id: string;
     customer_id: string | null;
     name: string;
-    phone: string;
+    phone: string | null;
     email: string | null;
     service: string | null;
     message: string | null;
@@ -78,7 +79,7 @@ export function LeadsManager({ leads }: { leads: LeadRow[] }) {
             const matchesSearch =
                 !query ||
                 lead.name.toLowerCase().includes(query) ||
-                lead.phone.toLowerCase().includes(query) ||
+                (lead.phone ?? "").toLowerCase().includes(query) ||
                 lead.email?.toLowerCase().includes(query) ||
                 lead.service?.toLowerCase().includes(query);
 
@@ -132,7 +133,7 @@ export function LeadsManager({ leads }: { leads: LeadRow[] }) {
 
                             <div className="space-y-2">
                                 <Label htmlFor="phone">Phone Number</Label>
-                                <Input id="phone" name="phone" required />
+                                <ContactInput kind="phone" id="phone" name="phone" />
                                 {state.errors?.phone?.map((error) => (
                                     <p key={error} className="text-xs text-destructive">
                                         {error}
@@ -142,7 +143,7 @@ export function LeadsManager({ leads }: { leads: LeadRow[] }) {
 
                             <div className="space-y-2">
                                 <Label htmlFor="email">Email</Label>
-                                <Input id="email" name="email" type="email" />
+                                <ContactInput kind="email" id="email" name="email" type="email" />
                             </div>
 
                             <div className="space-y-2">
@@ -371,9 +372,3 @@ export function LeadsManager({ leads }: { leads: LeadRow[] }) {
         </div>
     );
 }
-
-
-
-
-
-

@@ -1,4 +1,5 @@
 "use client";
+import { ContactInput } from "@/components/contacts/contact-input";
 
 import { useActionState, useEffect } from "react";
 import { CalendarClock, Loader2 } from "lucide-react";
@@ -56,12 +57,12 @@ export function AppointmentCreateForm({ services }: { services: ServiceOption[] 
 
           <div className="space-y-2">
             <Label>Phone</Label>
-            <Input name="customer_phone" placeholder="+923001234567" required />
+            <ContactInput kind="phone" name="customer_phone" placeholder="+923001234567" />
           </div>
 
           <div className="space-y-2">
             <Label>Email</Label>
-            <Input name="customer_email" type="email" placeholder="optional@email.com" />
+            <ContactInput kind="email" name="customer_email" type="email" placeholder="optional@email.com" />
           </div>
 
           <div className="space-y-2">
