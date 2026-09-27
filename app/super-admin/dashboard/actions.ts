@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSuperAdmin } from "@/lib/auth/server";
 import { logActivity } from "@/lib/activity-log";
+import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
 
 const businessSettingsSchema = z.object({
@@ -24,7 +25,7 @@ const subscriptionSchema = z.object({
   end_date: z.string().nullable(),
   grace_period_days: z.coerce.number().int().min(0).max(60),
   is_active: z.boolean(),
-  renewal_code: z.string().trim().nullable(),
+  renewal_code: z.string().trim().min(8).refine(value => new TextEncoder().encode(value).length <= 72).nullable(),
 });
 
 const featureSchema = z.object({
@@ -121,12 +122,17 @@ export async function updateSubscriptionSettings(formData: FormData) {
           : result.data.end_date,
       grace_period_days: result.data.grace_period_days,
       is_active: result.data.is_active,
-      renewal_code: result.data.renewal_code,
     })
     .eq("id", result.data.id);
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  if (result.data.renewal_code) {
+    const authenticated = await createClient();
+    const { error: codeError } = await authenticated.rpc("set_renewal_code", { new_code: result.data.renewal_code });
+    if (codeError) throw new Error("Subscription settings saved, but the renewal code could not be set.");
   }
 
   await logActivity({

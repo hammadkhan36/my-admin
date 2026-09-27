@@ -1,3 +1,6 @@
+import { randomUUID } from "node:crypto";
+import { consumeContactQuota, findSubmission, saveSubmission, submissionFingerprint } from "@/lib/website/submissions";
+import { resolveCustomer, validateContact } from "@/lib/contacts/server";
 import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase-admin";
@@ -10,13 +13,7 @@ const optionalText = (max: number) =>
 const leadSchema = z.object({
   name: z.string().trim().min(2).max(100),
 
-  phone: z
-    .string()
-    .trim()
-    .max(30)
-    .regex(/^\+?[\d\s().-]+$/)
-    .transform((value) => value.replace(/[\s().-]/g, ""))
-    .refine((value) => /^\+?\d{7,15}$/.test(value)),
+  phone: optionalText(30).transform(value => value.replace(/[\s().-]/g, "")).refine(value => !value || /^\+?\d{7,15}$/.test(value)),
 
   email: optionalText(254).refine(
     (value) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
@@ -102,55 +99,8 @@ async function readBody(request: NextRequest): Promise<unknown> {
   }
 }
 
-async function getOrCreateCustomer(
-  admin: AdminClient,
-  input: LeadInput
-): Promise<string> {
-  const { data: existing, error: lookupError } = await admin
-    .from("customers")
-    .select("id")
-    .eq("phone", input.phone)
-    .maybeSingle();
-
-  if (lookupError) {
-    throw new Error("CUSTOMER_LOOKUP_FAILED");
-  }
-
-  if (existing) {
-    // Public enquiries must not overwrite verified CRM details.
-    return existing.id as string;
-  }
-
-  const { data: created, error: insertError } = await admin
-    .from("customers")
-    .insert({
-      name: input.name,
-      phone: input.phone,
-      email: input.email || null,
-      last_seen_at: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
-
-  if (!insertError && created) {
-    return created.id as string;
-  }
-
-  // Another request may have inserted this phone concurrently.
-  // This recovery depends on a database unique constraint.
-  if (insertError?.code === "23505") {
-    const { data: concurrent, error: retryError } = await admin
-      .from("customers")
-      .select("id")
-      .eq("phone", input.phone)
-      .maybeSingle();
-
-    if (!retryError && concurrent) {
-      return concurrent.id as string;
-    }
-  }
-
-  throw new Error("CUSTOMER_CREATE_FAILED");
+async function getOrCreateCustomer(_admin: AdminClient, input: LeadInput): Promise<string> {
+  return resolveCustomer(input);
 }
 
 async function runFollowUps(
@@ -282,7 +232,7 @@ export async function POST(request: NextRequest) {
   const parsed = leadSchema.safeParse({
     ...body,
     name: body.name ?? body.customer_name,
-    phone: body.phone ?? body.customer_phone,
+    phone: body.phone ?? body.customer_phone ?? "",
     email: body.email ?? body.customer_email ?? "",
     service: body.service ?? "",
     message: body.message ?? body.note ?? "",
@@ -298,6 +248,11 @@ export async function POST(request: NextRequest) {
   }
 
   const input = parsed.data;
+  try { await validateContact(input.phone, input.email); }
+  catch { return fail("Please supply the required phone or email contact.", 400); }
+  const submissionId = typeof body.submission_id === "string" ? body.submission_id : randomUUID();
+  if (!z.string().uuid().safeParse(submissionId).success) return fail("Invalid submission key.", 400);
+  const fingerprint = submissionFingerprint(input);
   const seenAt = new Date().toISOString();
 
   let customerId: string;
@@ -306,14 +261,15 @@ export async function POST(request: NextRequest) {
   try {
     const admin = createAdminClient();
 
+    const previous = await findSubmission("leads", submissionId, fingerprint);
+    if (previous) return reply({ success: true, lead_id: previous }, 200);
+    await consumeContactQuota("leads", expectedKey, input.phone, input.email);
     customerId = await getOrCreateCustomer(admin, input);
 
-    const { data: lead, error } = await admin
-      .from("leads")
-      .insert({
+    const saved = await saveSubmission("leads", submissionId, fingerprint, {
         customer_id: customerId,
         name: input.name,
-        phone: input.phone,
+        phone: input.phone || null,
         email: input.email || null,
         service: input.service || null,
         message: input.message || null,
@@ -324,16 +280,12 @@ export async function POST(request: NextRequest) {
         utm_source: input.utm_source || null,
         utm_medium: input.utm_medium || null,
         utm_campaign: input.utm_campaign || null,
-      })
-      .select("id")
-      .single();
-
-    if (error || !lead) {
-      throw new Error("LEAD_CREATE_FAILED");
-    }
-
-    leadId = lead.id as string;
-  } catch {
+      });
+    leadId = saved.id;
+    if (saved.replayed) return reply({ success: true, lead_id: leadId }, 200);
+  } catch (error) {
+    if (error instanceof Error && error.message === "QUOTA_EXCEEDED") return fail("Too many requests. Please try again later.", 429);
+    if (error instanceof Error && error.message === "QUOTA_UNAVAILABLE") return fail("Submission service temporarily unavailable.", 503);
     console.error("[website-leads] Submission was not confirmed.");
 
     return fail(

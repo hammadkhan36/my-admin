@@ -1,0 +1,12 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const ts=require('typescript');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const moduleObject={exports:{}};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('lib/appointments/schedule.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:moduleObject.exports,module:moduleObject,Intl,Date});
+const {validDate,validTime,businessNow,fitsHours,overlaps}=moduleObject.exports;
+test('rejects impossible calendar dates and times',()=>{assert.equal(validDate('2027-02-29'),false);assert.equal(validDate('2028-02-29'),true);assert.equal(validTime('24:00'),false);});
+test('the whole appointment must fit business hours',()=>{const h={opens_at:'09:00',closes_at:'17:00',is_closed:false,is_24h:false};assert.equal(fitsHours(h,16*60+30,30),true);assert.equal(fitsHours(h,16*60+45,30),false);assert.equal(fitsHours({...h,is_closed:true},600,30),false);});
+test('overlap rejected but adjacent slots allowed across services',()=>{const b=[{time:'10:00',duration:60}];assert.equal(overlaps(630,30,b),true);assert.equal(overlaps(660,30,b),false);assert.equal(overlaps(570,30,b),false);});
+test('business timezone handles a different calendar day',()=>{const v=businessNow('Asia/Karachi',new Date('2026-09-27T21:00:00Z'));assert.equal(v.date,'2026-09-28');assert.equal(v.minutes,120);});

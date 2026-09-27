@@ -1,5 +1,6 @@
 "use server";
 
+import { resolveCustomer } from "@/lib/contacts/server";
 import { revalidatePath } from "next/cache";
 import { requirePermission, requireProfile } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase-server";
@@ -22,37 +23,8 @@ function failure(message: string): AppointmentActionState {
   return { ok: false, message };
 }
 
-async function getOrCreateCustomer(input: {
-  name: string;
-  phone: string;
-  email: string | null;
-  createdBy: string;
-}) {
-  const supabase = await createClient();
-  const phone = input.phone.replace(/[^\d+]/g, "");
-
-  const { data: existing } = await supabase
-    .from("customers")
-    .select("id")
-    .eq("phone", phone)
-    .maybeSingle();
-
-  if (existing) return existing.id;
-
-  const { data, error } = await supabase
-    .from("customers")
-    .insert({
-      name: input.name,
-      phone,
-      email: input.email,
-      created_by: input.createdBy,
-      last_seen_at: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data.id as string;
+async function getOrCreateCustomer(input: { name: string; phone: string; email: string | null; createdBy: string }) {
+  return resolveCustomer({ ...input, actorId: input.createdBy });
 }
 
 export async function createAppointment(formData: FormData) {
@@ -68,8 +40,8 @@ export async function createAppointment(formData: FormData) {
   const appointmentTime = String(formData.get("appointment_time") || "").slice(0, 5);
   const notes = String(formData.get("notes") || "").trim() || null;
 
-  if (!customerName || !customerPhone || !appointmentDate || !appointmentTime) {
-    throw new Error("Name, phone, date and time are required.");
+  if (!customerName || !appointmentDate || !appointmentTime) {
+    throw new Error("Name, date and time are required.");
   }
 
   const availability = await checkAppointmentAvailability({
@@ -95,7 +67,7 @@ export async function createAppointment(formData: FormData) {
       customer_id: customerId,
       service_id: serviceId,
       customer_name: customerName,
-      customer_phone: customerPhone.replace(/[^\d+]/g, ""),
+      customer_phone: customerPhone.replace(/[\s().-]/g, "") || null,
       customer_email: customerEmail,
       appointment_date: appointmentDate,
       appointment_time: appointmentTime,
@@ -107,9 +79,10 @@ export async function createAppointment(formData: FormData) {
     .select("id")
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(error.code === "23P01" ? "This appointment overlaps another booking. Choose another time." : "Appointment could not be saved.");
 
 
+  try {
   await supabase.from("appointment_status_history").insert({
     appointment_id: data.id,
     old_status: null,
@@ -135,6 +108,7 @@ export async function createAppointment(formData: FormData) {
     actorId: profile.id,
   });
 
+  } catch { console.error("[appointments] Follow-up failed", { appointmentId: data.id }); }
   revalidatePath("/appointments");
   revalidatePath("/crm/customers");
 }
@@ -187,7 +161,7 @@ export async function updateAppointmentStatus(formData: FormData) {
     .update({ status })
     .eq("id", id);
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(error.code === "23P01" ? "This appointment overlaps another booking. Choose another time." : "Appointment could not be saved.");
 
   await supabase.from("appointment_status_history").insert({
     appointment_id: id,
@@ -273,7 +247,7 @@ export async function updateAppointmentDetails(formData: FormData) {
     })
     .eq("id", id);
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(error.code === "23P01" ? "This appointment overlaps another booking. Choose another time." : "Appointment could not be saved.");
 
   await logActivity({
     actorId: profile.id,
@@ -325,7 +299,7 @@ export async function deleteAppointment(formData: FormData) {
 
   const { error } = await supabase.from("appointments").delete().eq("id", id);
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(error.code === "23P01" ? "This appointment overlaps another booking. Choose another time." : "Appointment could not be saved.");
 
   await logActivity({
     actorId: profile.id,

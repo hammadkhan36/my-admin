@@ -1,4 +1,5 @@
 "use client";
+import { ContactInput } from "@/components/contacts/contact-input";
 
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
@@ -25,7 +26,7 @@ type ServiceOption = {
 export type AppointmentRow = {
   id: string;
   customer_name: string;
-  customer_phone: string;
+  customer_phone: string | null;
   customer_email: string | null;
   appointment_date: string;
   appointment_time: string;
@@ -67,7 +68,7 @@ export function AppointmentsManager({
 
     return appointments.filter((appointment) =>
       appointment.customer_name.toLowerCase().includes(value) ||
-      appointment.customer_phone.toLowerCase().includes(value) ||
+      (appointment.customer_phone ?? "").toLowerCase().includes(value) ||
       appointment.status.toLowerCase().includes(value)
     );
   }, [appointments, search]);
@@ -125,12 +126,12 @@ export function AppointmentsManager({
 
             <div className="space-y-2">
               <Label>Phone</Label>
-              <Input name="customer_phone" placeholder="+923001234567" required />
+              <ContactInput kind="phone" name="customer_phone" placeholder="+923001234567" />
             </div>
 
             <div className="space-y-2">
               <Label>Email</Label>
-              <Input name="customer_email" type="email" placeholder="optional@email.com" />
+              <ContactInput kind="email" name="customer_email" type="email" placeholder="optional@email.com" />
             </div>
 
             <div className="space-y-2">
