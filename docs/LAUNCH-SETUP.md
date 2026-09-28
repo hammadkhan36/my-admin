@@ -8,7 +8,7 @@ Each business needs its own Supabase project, admin deployment, website deployme
 ## 1. Connect the existing database
 For the existing clinic, use its existing Supabase project. Do not rerun old SQL snippets over it. The new contact settings, email outbox, submission idempotency, appointment overlap protection and contact quota upgrades have already been applied.
 
-For a completely new business, stop before using the old Docs/Sqlcodes folder as an installer: a complete empty-project schema installer and reset test are still pending. Upgrade SQL alone cannot create every base table, policy or role.
+For a completely new business, use database/fresh-install.sql, database/defaults.sql and database/bootstrap-admin.sql from the admin repository, following database/README.md. The installer is tested in isolated Postgres with a Supabase Auth SQL fixture. Real hosted Auth and deployment still require the acceptance checks below. Do not combine it with old Docs/Sqlcodes snippets.
 
 ## 2. Configure the admin deployment
 Set these in your hosting provider's environment settings; redeploy after changing them:
@@ -55,4 +55,7 @@ No scheduler or live Resend delivery was verified in this workspace. Configure h
 Repeated-contact protection allows 10 requests per contact, per action, per hour. This is not a complete bot protection system; configure hosting-level traffic controls for public launch.
 
 ## Still required before claiming production-ready
-Actual hosting environment configuration, worker scheduling, authenticated live acceptance tests, confirmed email delivery, and a clean-project installer/reset test for selling this as an immediately reusable template. Do not advertise unverified modules as working.
+Actual hosting environment configuration, worker scheduling, authenticated live acceptance tests, confirmed email delivery, and a hosted new-project smoke test before selling this as an immediately reusable template. The schema installer and local database tests are now included in the admin repository. Do not advertise unverified modules as working.
+
+## Current release scope
+Campaigns, referrals, product catalogue and scheduled follow-ups are unfinished and hidden from client navigation/settings. Their old demo pages return 404. Do not advertise them as working features. Calendar now shows actual appointments for a selected business date; availability uses the real business-hours editor.

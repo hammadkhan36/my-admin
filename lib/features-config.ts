@@ -38,22 +38,22 @@ export type FeatureKey =
 
 export type Features = Record<FeatureKey, boolean>;
 
-// Default: Sab ON (business apni marzi se off karega)
+// Core defaults; unfinished modules stay out of this release.
 export const defaultFeatures: Features = {
   dashboard: true,
   leads: true,
   customers: true,
   appointments: true,
   calendar: true,
-  campaigns: true,
+  campaigns: false,
   offers: true,
   coupons: true,
-  referrals: true,
+  referrals: false,
   reviews: true,
   testimonials: true,
   gallery: true,
   services: true,
-  products: true,
+  products: false,
   pages: true,
   faqs: true,
   media: true,
@@ -70,7 +70,7 @@ export const defaultFeatures: Features = {
   settings: true,
   notifications: true,
   forms: true,
-  followUps: true,
+  followUps: false,
   leadSources: true,
 };
 
@@ -106,10 +106,8 @@ export const featureGroups: { label: string; items: { key: FeatureKey; label: st
   {
     label: "Marketing",
     items: [
-      { key: "campaigns", label: "Campaigns" },
       { key: "offers", label: "Offers" },
       { key: "coupons", label: "Coupons" },
-      { key: "referrals", label: "Referrals" },
     ],
   },
   {
@@ -124,7 +122,6 @@ export const featureGroups: { label: string; items: { key: FeatureKey; label: st
     label: "Website",
     items: [
       { key: "services", label: "Services" },
-      { key: "products", label: "Products" },
       { key: "pages", label: "Pages" },
       { key: "faqs", label: "FAQs" },
       { key: "media", label: "Media" },
