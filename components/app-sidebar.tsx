@@ -142,7 +142,7 @@
 //   {
 //     label: "System",
 //     items: [
-//       { title: "Notifications Settings", url: "/system/notifications", icon: BellIcon },
+//       { title: "Notifications Settings", url: "/system/settings", icon: BellIcon },
 //       { title: "Activity Logs", url: "/system/activity-logs", icon: HistoryIcon },
 //       { title: "Settings", url: "/system/settings", icon: SettingsIcon },
 //     ],
@@ -239,6 +239,8 @@
 
 
 "use client"
+
+import { isReleasedFeature } from "@/lib/release-features";
 
 import * as React from "react"
 import Link from "next/link"
@@ -388,7 +390,7 @@ const menuGroups: { label: string; items: MenuItem[] }[] = [
   {
     label: "System",
     items: [
-      { title: "Notifications Settings", url: "/system/notifications", icon: BellIcon, featureKey: "notifications" },
+      { title: "Notifications Settings", url: "/system/settings", icon: BellIcon, featureKey: "notifications" },
       { title: "Activity Logs", url: "/system/activity-logs", icon: HistoryIcon, featureKey: "activityLogs" },
       { title: "Settings", url: "/system/settings", icon: SettingsIcon, featureKey: "settings" },
     ],
@@ -404,7 +406,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const visibleGroups = menuGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => features[item.featureKey] !== false),
+      items: group.items.filter((item) => isReleasedFeature(item.featureKey) && features[item.featureKey] !== false),
     }))
     .filter((group) => group.items.length > 0);
 
