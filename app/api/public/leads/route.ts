@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { consumeContactQuota, findSubmission, saveSubmission, submissionFingerprint } from "@/lib/website/submissions";
 import { resolveCustomer, validateContact } from "@/lib/contacts/server";
-import { after, NextRequest, NextResponse } from "next/server";
+import { after, NextRequest } from "next/server";
 import { z } from "zod";
+import { fail, readBody, reply, safePageUrl } from "@/lib/website/request";
 import { createAdminClient } from "@/lib/supabase-admin";
 
 export const runtime = "nodejs";
@@ -30,74 +31,6 @@ const leadSchema = z.object({
 
 type LeadInput = z.infer<typeof leadSchema>;
 type AdminClient = ReturnType<typeof createAdminClient>;
-
-function reply(
-  data: Record<string, unknown>,
-  status = 200
-) {
-  return NextResponse.json(data, {
-    status,
-    headers: {
-      "Cache-Control": "no-store",
-    },
-  });
-}
-
-function fail(error: string, status: number) {
-  return reply({ success: false, error }, status);
-}
-
-function safePageUrl(value: string): string | null {
-  if (!value) return null;
-
-  try {
-    const url = new URL(value);
-
-    if (!["https:", "http:"].includes(url.protocol)) {
-      return null;
-    }
-
-    // Exclude credentials, query parameters and fragments.
-    return `${url.origin}${url.pathname}`;
-  } catch {
-    return null;
-  }
-}
-
-async function readBody(request: NextRequest): Promise<unknown> {
-  const reader = request.body?.getReader();
-
-  if (!reader) {
-    throw new Error("INVALID_BODY");
-  }
-
-  const decoder = new TextDecoder();
-  let bytes = 0;
-  let text = "";
-
-  try {
-    while (true) {
-      const chunk = await reader.read();
-
-      if (chunk.done) break;
-
-      bytes += chunk.value.byteLength;
-
-      if (bytes > 16_000) {
-        await reader.cancel();
-        throw new Error("BODY_TOO_LARGE");
-      }
-
-      text += decoder.decode(chunk.value, { stream: true });
-    }
-
-    text += decoder.decode();
-
-    return JSON.parse(text);
-  } finally {
-    reader.releaseLock();
-  }
-}
 
 async function getOrCreateCustomer(_admin: AdminClient, input: LeadInput): Promise<string> {
   return resolveCustomer(input);

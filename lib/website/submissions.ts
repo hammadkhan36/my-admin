@@ -23,7 +23,8 @@ export async function saveSubmission(table: Table, id: string, fingerprint: stri
 }
 
 // Server-side repeated-contact quota. Replayed submissions are checked first.
-export async function consumeContactQuota(scope: Table, secret: string, phone: string, email: string | null) {
+export type QuotaScope = Table | "reviews" | "forms";
+export async function consumeContactQuota(scope: QuotaScope, secret: string, phone: string, email: string | null) {
   const contacts = [phone.replace(/[\s().-]/g, ""), (email || "").trim().toLowerCase()].filter(Boolean);
   for (const contact of contacts) {
     const key = createHmac("sha256", secret).update(`${scope}:${contact}`).digest("hex");

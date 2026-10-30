@@ -1,79 +1,84 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { businessNow } from "@/lib/appointments/schedule";
+import { fail, readJsonObject, reply } from "@/lib/website/request";
 
-function ok(data: Record<string, unknown> = {}) {
-  return NextResponse.json({
-    success: true,
-    ...data,
-  });
-}
+export const runtime = "nodejs";
 
-function fail(message: string, status = 400) {
-  return NextResponse.json(
-    {
-      success: false,
-      error: message,
-    },
-    { status }
-  );
-}
+const validateSchema = z.object({
+  code: z.string().trim().min(1).max(64),
+});
 
 function normalizeCode(value: string) {
   return value.trim().toUpperCase().replace(/\s+/g, "-");
 }
 
-function todayDate() {
-  return new Date().toISOString().slice(0, 10);
-}
+// One answer for every failure (unknown, inactive, not started, expired, used up),
+// so a script cannot tell which codes exist.
+const NOT_VALID = "Coupon code is not valid.";
 
 export async function POST(request: NextRequest) {
-  const apiKey = request.headers.get("x-api-key");
+  const expectedKey = process.env.WEBSITE_CONFIG_API_KEY;
 
-  if (!process.env.WEBSITE_CONFIG_API_KEY || apiKey !== process.env.WEBSITE_CONFIG_API_KEY) {
+  if (!expectedKey) {
+    return fail("Coupon service is unavailable.", 503);
+  }
+
+  if (request.headers.get("x-api-key") !== expectedKey) {
     return fail("Unauthorized request.", 401);
   }
 
-  const body = await request.json();
-  const code = normalizeCode(String(body.code || ""));
+  const parsedBody = await readJsonObject(request);
 
-  if (!code) return fail("Coupon code is required.");
+  if ("response" in parsedBody) return parsedBody.response;
 
-  const supabase = createAdminClient();
-  const today = todayDate();
+  const parsed = validateSchema.safeParse({ code: parsedBody.body.code });
 
-  const { data: coupon, error } = await supabase
-    .from("coupons")
-    .select(
-      "id, code, title, description, discount_type, discount_value, starts_at, ends_at, usage_limit, used_count, is_active"
-    )
-    .eq("code", code)
-    .maybeSingle();
+  if (!parsed.success) return fail("Coupon code is required.", 400);
 
-  if (error) return fail(error.message, 500);
-  if (!coupon) return fail("Coupon code is not valid.");
-  if (!coupon.is_active) return fail("Coupon code is not active.");
+  try {
+    const supabase = createAdminClient();
 
-  if (coupon.starts_at && coupon.starts_at > today) {
-    return fail("Coupon is not active yet.");
+    const [couponResult, settingsResult] = await Promise.all([
+      supabase
+        .from("coupons")
+        .select(
+          "id, code, title, description, discount_type, discount_value, starts_at, ends_at, usage_limit, used_count, is_active"
+        )
+        .eq("code", normalizeCode(parsed.data.code))
+        .maybeSingle(),
+      supabase.from("business_settings").select("timezone").limit(1).maybeSingle(),
+    ]);
+
+    if (couponResult.error || settingsResult.error) throw new Error("LOOKUP_FAILED");
+
+    const coupon = couponResult.data;
+    const today = businessNow(settingsResult.data?.timezone || "UTC").date;
+
+    if (
+      !coupon ||
+      !coupon.is_active ||
+      (coupon.starts_at && coupon.starts_at > today) ||
+      (coupon.ends_at && coupon.ends_at < today) ||
+      (coupon.usage_limit !== null && coupon.used_count >= coupon.usage_limit)
+    ) {
+      return fail(NOT_VALID, 400);
+    }
+
+    return reply({
+      success: true,
+      coupon: {
+        code: coupon.code,
+        title: coupon.title,
+        description: coupon.description,
+        discount_type: coupon.discount_type,
+        discount_value: coupon.discount_value,
+      },
+      message: "Coupon is valid.",
+    });
+  } catch {
+    console.error("[website-coupons] Validate failed.");
+    return fail("Coupon could not be checked. Please try again.", 500);
   }
-
-  if (coupon.ends_at && coupon.ends_at < today) {
-    return fail("Coupon has expired.");
-  }
-
-  if (coupon.usage_limit !== null && coupon.used_count >= coupon.usage_limit) {
-    return fail("Coupon usage limit reached.");
-  }
-
-  return ok({
-    coupon: {
-      id: coupon.id,
-      code: coupon.code,
-      title: coupon.title,
-      description: coupon.description,
-      discount_type: coupon.discount_type,
-      discount_value: coupon.discount_value,
-    },
-    message: "Coupon is valid.",
-  });
 }

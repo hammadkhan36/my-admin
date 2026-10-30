@@ -65,7 +65,10 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await query;
 
-  if (error) return fail(error.message, 500);
+  if (error) {
+    console.error("[website-pages] Page list failed.");
+    return fail("Request failed.", 500);
+  }
 
   return ok({
     pages: data ?? [],

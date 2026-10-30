@@ -163,7 +163,8 @@ export async function POST(request: NextRequest) {
   });
 
   if (error) {
-    return fail(error.message, 500);
+    console.error("[website-analytics] Event insert failed.");
+    return fail("Request failed.", 500);
   }
 
   return NextResponse.json({ success: true });

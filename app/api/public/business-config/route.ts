@@ -18,6 +18,11 @@ function fail(message: string, status = 400) {
   );
 }
 
+function serverError() {
+  console.error("[website-business-config] Load failed.");
+  return fail("Request failed.", 500);
+}
+
 export async function GET(request: NextRequest) {
   const apiKey = request.headers.get("x-api-key");
 
@@ -183,18 +188,18 @@ export async function GET(request: NextRequest) {
   ]);
 
 
-  if (businessError) return fail(businessError.message, 500);
-  if (servicesError) return fail(servicesError.message, 500);
-  if (hoursError) return fail(hoursError.message, 500);
-  if (areasError) return fail(areasError.message, 500);
-  if (faqsError) return fail(faqsError.message, 500);
-  if (testimonialsError) return fail(testimonialsError.message, 500);
-  if (mediaError) return fail(mediaError.message, 500);
-  if (offersError) return fail(offersError.message, 500);
-  if (reviewsError) return fail(reviewsError.message, 500);
-  if (formsError) return fail(formsError.message, 500);
-  if (pagesError) return fail(pagesError.message, 500);
-  if (seoError) return fail(seoError.message, 500);
+  if (businessError) return serverError();
+  if (servicesError) return serverError();
+  if (hoursError) return serverError();
+  if (areasError) return serverError();
+  if (faqsError) return serverError();
+  if (testimonialsError) return serverError();
+  if (mediaError) return serverError();
+  if (offersError) return serverError();
+  if (reviewsError) return serverError();
+  if (formsError) return serverError();
+  if (pagesError) return serverError();
+  if (seoError) return serverError();
 
 
   return ok({

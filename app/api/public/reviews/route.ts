@@ -1,143 +1,126 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { createNotification } from "@/lib/notifications";
 import { logActivity } from "@/lib/activity-log";
+import { consumeContactQuota } from "@/lib/website/submissions";
+import { fail, readJsonObject, reply } from "@/lib/website/request";
 
-function ok(data: Record<string, unknown> = {}) {
-  return NextResponse.json({
-    success: true,
-    ...data,
-  });
-}
+export const runtime = "nodejs";
 
-function fail(message: string, status = 400) {
-  return NextResponse.json(
-    {
-      success: false,
-      error: message,
-    },
-    { status }
-  );
-}
+const optionalText = (max: number) =>
+  z.string().trim().max(max).optional().default("");
 
-function asString(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function cleanPhone(phone: string) {
-  return phone.replace(/[^\d+]/g, "");
-}
-
-function ratingValue(value: unknown) {
-  const rating = Number(value || 5);
-  if (!Number.isFinite(rating)) return 5;
-  return Math.min(5, Math.max(1, rating));
-}
-
-async function getCustomerId(input: {
-  name: string;
-  phone: string | null;
-  email: string | null;
-}) {
-  if (!input.phone) return null;
-
-  const supabase = createAdminClient();
-  const phone = cleanPhone(input.phone);
-
-  const { data: existing } = await supabase
-    .from("customers")
-    .select("id")
-    .eq("phone", phone)
-    .maybeSingle();
-
-  if (existing) return existing.id as string;
-
-  const { data } = await supabase
-    .from("customers")
-    .insert({
-      name: input.name,
-      phone,
-      email: input.email,
-      last_seen_at: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
-
-  return data?.id as string | null;
-}
+const reviewSchema = z.object({
+  customer_name: z.string().trim().min(2).max(100),
+  customer_phone: optionalText(30)
+    .transform((value) => value.replace(/[\s().-]/g, ""))
+    .refine((value) => !value || /^\+?\d{7,15}$/.test(value)),
+  customer_email: optionalText(254).refine(
+    (value) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+  ),
+  rating: z.coerce.number().int().min(1).max(5),
+  title: optionalText(150),
+  comment: z.string().trim().min(5).max(2000),
+});
 
 export async function POST(request: NextRequest) {
-  const apiKey = request.headers.get("x-api-key");
+  const expectedKey = process.env.WEBSITE_CONFIG_API_KEY;
 
-  if (!process.env.WEBSITE_CONFIG_API_KEY || apiKey !== process.env.WEBSITE_CONFIG_API_KEY) {
+  if (!expectedKey) {
+    return fail("Review service is unavailable.", 503);
+  }
+
+  if (request.headers.get("x-api-key") !== expectedKey) {
     return fail("Unauthorized request.", 401);
   }
 
+  const parsedBody = await readJsonObject(request);
+
+  if ("response" in parsedBody) return parsedBody.response;
+
+  const body = parsedBody.body;
+
+  // Preserve field aliases supported by the existing API.
+  const parsed = reviewSchema.safeParse({
+    customer_name: body.customer_name ?? body.name,
+    customer_phone: body.customer_phone ?? body.phone ?? "",
+    customer_email: body.customer_email ?? body.email ?? "",
+    rating: body.rating,
+    title: body.title ?? "",
+    comment: body.comment ?? body.message,
+  });
+
+  if (!parsed.success) {
+    return fail("Please check your name, rating and review.", 400);
+  }
+
+  const input = parsed.data;
+
+  // A contact is needed so the per-contact quota can apply.
+  if (!input.customer_phone && !input.customer_email) {
+    return fail("Please supply a phone number or email address.", 400);
+  }
+
   try {
-    const body = await request.json();
+    await consumeContactQuota(
+      "reviews",
+      expectedKey,
+      input.customer_phone,
+      input.customer_email || null
+    );
 
-    const customerName = asString(body.customer_name || body.name);
-    const customerPhone = asString(body.customer_phone || body.phone) || null;
-    const customerEmail = asString(body.customer_email || body.email) || null;
-    const rating = ratingValue(body.rating);
-    const title = asString(body.title) || null;
-    const comment = asString(body.comment || body.message);
-
-    if (!customerName) return fail("Customer name is required.");
-    if (!comment) return fail("Review comment is required.");
-
-    const supabase = createAdminClient();
-
-    const customerId = await getCustomerId({
-      name: customerName,
-      phone: customerPhone,
-      email: customerEmail,
-    });
-
-    const { data, error } = await supabase
+    // Public reviews are never linked to, or create, a customer record.
+    const { data, error } = await createAdminClient()
       .from("reviews")
       .insert({
-        customer_id: customerId,
-        customer_name: customerName,
-        customer_phone: customerPhone ? cleanPhone(customerPhone) : null,
-        customer_email: customerEmail,
-        rating,
-        title,
-        comment,
+        customer_id: null,
+        customer_name: input.customer_name,
+        customer_phone: input.customer_phone || null,
+        customer_email: input.customer_email || null,
+        rating: input.rating,
+        title: input.title || null,
+        comment: input.comment,
         source: "website",
         status: "pending",
       })
       .select("id")
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error || !data) throw new Error("INSERT_FAILED");
 
     await logActivity({
       eventType: "review.created",
       targetType: "review",
       targetId: data.id,
       details: {
-        customer_name: customerName,
-        rating,
+        customer_name: input.customer_name,
+        rating: input.rating,
         source: "website",
       },
     });
 
     await createNotification({
       title: "New website review",
-      message: `${customerName} submitted a review. Approval required.`,
+      message: `${input.customer_name} submitted a review. Approval required.`,
       type: "info",
       targetUrl: "/reputation/reviews",
     });
 
-    return ok({
-      review_id: data.id,
+    return reply({
+      success: true,
       message: "Review submitted successfully and is pending approval.",
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Review submit failed.";
+    if (error instanceof Error && error.message === "QUOTA_EXCEEDED") {
+      return fail("Too many requests. Please try again later.", 429);
+    }
 
-    return fail(message, 500);
+    if (error instanceof Error && error.message === "QUOTA_UNAVAILABLE") {
+      return fail("Submission service temporarily unavailable.", 503);
+    }
+
+    console.error("[website-reviews] Submission was not confirmed.");
+    return fail("We could not confirm your review. Please try again later.", 500);
   }
 }

@@ -47,6 +47,7 @@ Mutations live in `actions.ts` next to each page (`"use server"`): `requirePermi
 
 ### Website integration details
 - Lead/appointment submissions are idempotent (`submission_id` + SHA-256 request fingerprint) and rate-limited per phone/email via `consume_submission_quota` — `lib/website/submissions.ts`.
+- Public reviews and custom-form submissions use the same per-contact quota (`consumeContactQuota`). Coupon redeem is one atomic `redeem_coupon` RPC (service-role only); validate/redeem return one generic error. Shared JSON/size/URL helpers: `lib/website/request.ts`. There is no IP quota yet; add it together with the website proxy when reviews/forms/coupons come back.
 - Contacts are normalized and matched/created as customers by `lib/contacts/server.ts` (`resolveCustomer`, `validateContact`). `contact_mode` (`phone` | `email`) in business settings decides which contact field is required, and is exposed to the website via `/api/public/contact-config`.
 - Appointment availability: `lib/appointments/schedule.ts` (pure, tested) + `lib/appointments/availability.ts` (business hours, timezone, existing bookings). The DB also has an exclusion constraint against overlapping bookings (`23P01`).
 

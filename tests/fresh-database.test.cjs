@@ -166,3 +166,29 @@ test('marketing and staff permission upgrade SQL fixes an old database and is re
  assert.equal(await scalar(db,"SELECT count(*)::int FROM public.role_permissions WHERE permission_key='staff.delete'"),0);
  }finally{await db.close();}
 });
+test('redeem_coupon is atomic, honours limit/dates/active, is service-only and its upgrade SQL is repeatable',async()=>{
+ const db=new PGlite({extensions:{pgcrypto}});
+ try{
+ await db.exec(authFixture);await db.exec(schema);await db.exec(defaults);
+ await db.exec(`INSERT INTO public.coupons(code,title,usage_limit) VALUES ('ONCE','Once',1);
+  INSERT INTO public.coupons(code,title) VALUES ('OPEN','Open');
+  INSERT INTO public.coupons(code,title,is_active) VALUES ('OFF','Off',false);
+  INSERT INTO public.coupons(code,title,ends_at) VALUES ('OLD','Old','2000-01-01');
+  INSERT INTO public.coupons(code,title,starts_at) VALUES ('SOON','Soon','2098-01-01');`);
+ const redeem=async code=>(await db.query('SELECT * FROM public.redeem_coupon($1)',[code])).rows;
+ const first=await redeem('ONCE');
+ assert.equal(first.length,1);assert.equal(first[0].new_used_count,1);
+ assert.equal((await redeem('ONCE')).length,0);
+ assert.equal(await scalar(db,"SELECT used_count FROM public.coupons WHERE code='ONCE'"),1);
+ assert.equal((await redeem('OPEN'))[0].new_used_count,1);
+ assert.equal((await redeem('OPEN'))[0].new_used_count,2);
+ for(const code of ['OFF','OLD','SOON','MISSING'])assert.equal((await redeem(code)).length,0);
+ await db.exec(`SET request.jwt.claim.sub='${owner}'; SET ROLE authenticated;`);
+ await assert.rejects(db.exec("SELECT * FROM public.redeem_coupon('OPEN')"),/permission denied/);
+ await db.exec('RESET ROLE;');
+ const upgrade=fs.readFileSync('Docs/database-upgrades/atomic_coupon_redeem.sql','utf8');
+ await db.exec('DROP FUNCTION public.redeem_coupon(text);');
+ await db.exec(upgrade);await db.exec(upgrade);
+ assert.equal((await redeem('OPEN'))[0].new_used_count,3);
+ }finally{await db.close();}
+});

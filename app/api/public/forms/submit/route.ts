@@ -1,7 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { createNotification } from "@/lib/notifications";
 import { logActivity } from "@/lib/activity-log";
+import { consumeContactQuota } from "@/lib/website/submissions";
+import { fail, readJsonObject, reply, safePageUrl } from "@/lib/website/request";
+
+export const runtime = "nodejs";
+
+const MAX_VALUE_LENGTH = 2000;
+const MAX_FIELDS = 50;
+
+const submitSchema = z.object({
+  form_slug: z.string().trim().min(1).max(100),
+  data: z.record(z.string(), z.unknown()),
+  page_url: z.string().trim().max(2048).optional().default(""),
+  referrer: z.string().trim().max(2048).optional().default(""),
+});
 
 type FormField = {
   label: string;
@@ -10,78 +25,90 @@ type FormField = {
   required: boolean;
 };
 
-function ok(data: Record<string, unknown> = {}) {
-  return NextResponse.json({
-    success: true,
-    ...data,
-  });
-}
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function fail(message: string, status = 400) {
-  return NextResponse.json(
-    {
-      success: false,
-      error: message,
-    },
-    { status }
-  );
-}
-
-function asString(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
+function fieldText(value: unknown) {
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return "";
 }
 
 export async function POST(request: NextRequest) {
-  const apiKey = request.headers.get("x-api-key");
+  const expectedKey = process.env.WEBSITE_CONFIG_API_KEY;
 
-  if (!process.env.WEBSITE_CONFIG_API_KEY || apiKey !== process.env.WEBSITE_CONFIG_API_KEY) {
+  if (!expectedKey) {
+    return fail("Form service is unavailable.", 503);
+  }
+
+  if (request.headers.get("x-api-key") !== expectedKey) {
     return fail("Unauthorized request.", 401);
   }
 
+  const parsedBody = await readJsonObject(request);
+
+  if ("response" in parsedBody) return parsedBody.response;
+
+  const body = parsedBody.body;
+
+  const parsed = submitSchema.safeParse({
+    form_slug: body.form_slug ?? body.slug,
+    data: body.data ?? {},
+    page_url: body.page_url ?? "",
+    referrer: body.referrer ?? "",
+  });
+
+  if (!parsed.success) return fail("Please check the form details.", 400);
+
+  const input = parsed.data;
+
   try {
-    const body = await request.json();
-
-    const formSlug = asString(body.form_slug || body.slug);
-    const data = (body.data || {}) as Record<string, unknown>;
-    const pageUrl = asString(body.page_url) || null;
-    const referrer = asString(body.referrer) || null;
-
-    if (!formSlug) return fail("Form slug is required.");
-
     const supabase = createAdminClient();
 
     const { data: form, error: formError } = await supabase
       .from("custom_forms")
       .select("id, name, slug, fields, is_active")
-      .eq("slug", formSlug)
+      .eq("slug", input.form_slug)
       .maybeSingle();
 
-    if (formError) return fail(formError.message, 500);
-    if (!form || !form.is_active) return fail("Form is not available.");
+    if (formError) throw new Error("FORM_LOOKUP_FAILED");
+    if (!form || !form.is_active) return fail("Form is not available.", 400);
 
-    const fields = (form.fields || []) as FormField[];
+    const fields = (Array.isArray(form.fields) ? form.fields : [])
+      .slice(0, MAX_FIELDS) as FormField[];
+
+    // Store only the fields the form defines; anything else is dropped.
+    const data: Record<string, string> = {};
 
     for (const field of fields) {
-      if (field.required && !asString(data[field.name])) {
-        return fail(`${field.label} is required.`);
+      if (!field || typeof field.name !== "string") continue;
+
+      const value = fieldText(input.data[field.name]);
+
+      if (value.length > MAX_VALUE_LENGTH) {
+        return fail(`${field.label || field.name} is too long.`, 400);
       }
+
+      if (field.required && !value) {
+        return fail(`${field.label || field.name} is required.`, 400);
+      }
+
+      if (value && field.type === "email" && !EMAIL_PATTERN.test(value)) {
+        return fail(`${field.label || field.name} must be a valid email address.`, 400);
+      }
+
+      if (value) data[field.name] = value;
     }
 
     const customerName =
-      asString(data.full_name) ||
-      asString(data.name) ||
-      asString(data.customer_name) ||
-      null;
-
+      (data.full_name || data.name || data.customer_name || "").slice(0, 100) || null;
     const customerPhone =
-      asString(data.phone) ||
-      asString(data.customer_phone) ||
-      null;
-
+      (data.phone || data.customer_phone || "").slice(0, 30) || null;
     const customerEmail =
-      asString(data.email) ||
-      asString(data.customer_email) ||
-      null;
+      (data.email || data.customer_email || "").slice(0, 254) || null;
+
+    if (customerPhone || customerEmail) {
+      await consumeContactQuota("forms", expectedKey, customerPhone || "", customerEmail);
+    }
 
     const { data: submission, error } = await supabase
       .from("form_submissions")
@@ -92,13 +119,13 @@ export async function POST(request: NextRequest) {
         customer_phone: customerPhone,
         customer_email: customerEmail,
         data,
-        page_url: pageUrl,
-        referrer,
+        page_url: safePageUrl(input.page_url),
+        referrer: safePageUrl(input.referrer),
       })
       .select("id")
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error || !submission) throw new Error("INSERT_FAILED");
 
     await logActivity({
       eventType: "form.submitted",
@@ -118,12 +145,21 @@ export async function POST(request: NextRequest) {
       targetUrl: "/website/forms",
     });
 
-    return ok({
+    return reply({
+      success: true,
       submission_id: submission.id,
       message: "Form submitted successfully.",
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Form submit failed.";
-    return fail(message, 500);
+    if (error instanceof Error && error.message === "QUOTA_EXCEEDED") {
+      return fail("Too many requests. Please try again later.", 429);
+    }
+
+    if (error instanceof Error && error.message === "QUOTA_UNAVAILABLE") {
+      return fail("Submission service temporarily unavailable.", 503);
+    }
+
+    console.error("[website-forms] Submission was not confirmed.");
+    return fail("We could not confirm your submission. Please try again later.", 500);
   }
 }
