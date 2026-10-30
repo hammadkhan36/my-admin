@@ -38,7 +38,7 @@ Admin dashboard / CRM for **one** local business (currently a dental clinic) and
 - `lib/auth/server.ts`: `getCurrentProfile` (cached, `profiles` table), `requireProfile`, `requireSuperAdmin`, `getCurrentPermissions` (RPC `get_my_permissions`), `requirePermission("leads.create")` (RPC `has_permission`; superadmin/owner always pass). Details: `Docs/AUTH_ROLES_PERMISSIONS.md`.
 
 ### Server actions pattern
-Mutations live in `actions.ts` next to each page (`"use server"`): `requirePermission(...)` → zod-validate `FormData` → write with `createAdminClient()` → `logActivity(...)` / `createNotification(...)` → `revalidatePath(...)`. Return an action-state object (`lib/action-state.ts`) consumed by `useActionState` forms and `components/form-action-alert.tsx`. Data loaders for pages are in `lib/*-data.ts` (`crm-data`, `appointment-data`, `marketing-data`, `website-data`, ...).
+Mutations live in `actions.ts` next to each page (`"use server"`): `requirePermission(...)` → zod-validate `FormData` → write with `createAdminClient()` → `logActivity(...)` / `createNotification(...)` → `revalidatePath(...)`. Return an action-state object (`lib/action-state.ts`) consumed by `useActionState` forms and `components/form-action-alert.tsx`. Pages read data directly in their server `page.tsx` with `createClient()` from `lib/supabase-server.ts` (RLS applies) after `requirePermission(...)`. The `lib/*-data.ts` files (`crm-data`, `appointment-data`, ...) are old mock data that nothing imports, so don't build on them.
 
 ### Feature flags and subscription
 - Section layouts call `requireFeatureEnabled(key)` (`lib/features/server.ts`, reads `feature_settings`; superadmin bypasses). Keys in `lib/features-config.ts`.
