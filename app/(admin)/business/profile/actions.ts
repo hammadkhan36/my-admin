@@ -8,6 +8,7 @@ import { z } from "zod";
 import { requirePermission } from "@/lib/auth/server";
 import { logActivity } from "@/lib/activity-log";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { isValidTimeZone } from "@/lib/appointments/schedule";
 import {
   actionFailure,
   actionSuccess,
@@ -31,6 +32,7 @@ const businessProfileSchema = z.object({
   logo_url: z.string().trim().optional(),
   favicon_url: z.string().trim().optional(),
   theme_color: z.string().trim().optional(),
+  timezone: z.string().trim().refine(isValidTimeZone, "Choose a valid timezone"),
 });
 
 function emptyToNull(value?: string) {
@@ -54,6 +56,7 @@ export async function updateBusinessProfile(
     logo_url: formData.get("logo_url"),
     favicon_url: formData.get("favicon_url"),
     theme_color: formData.get("theme_color"),
+    timezone: formData.get("timezone"),
   });
 
   if (!result.success) {
@@ -76,6 +79,7 @@ export async function updateBusinessProfile(
       logo_url: emptyToNull(result.data.logo_url),
       favicon_url: emptyToNull(result.data.favicon_url),
       theme_color: result.data.theme_color || "#2563eb",
+      timezone: result.data.timezone,
     })
     .eq("id", result.data.id);
 
@@ -93,10 +97,12 @@ export async function updateBusinessProfile(
     targetId: result.data.id,
     details: {
       business_name: result.data.business_name,
+      timezone: result.data.timezone,
     },
   });
 
   revalidatePath("/business/profile");
+  revalidatePath("/appointments/calendar");
   revalidatePath("/dashboard");
 
   return {

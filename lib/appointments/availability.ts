@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase-admin";
-import { validDate, validTime, minutes, businessNow, fitsHours, overlaps } from "./schedule";
+import { validDate, validTime, minutes, businessNow, fitsHours, overlaps, isPastStart } from "./schedule";
 
 export async function loadAvailability(date: string, serviceId?: string | null, ignoreId?: string | null) {
   if (!validDate(date)) throw new Error("Choose a valid date.");
@@ -33,7 +33,7 @@ export async function checkAppointmentAvailability(input: {
     const data = await loadAvailability(input.appointmentDate, input.serviceId, input.ignoreAppointmentId);
     const now = businessNow(data.timezone);
     const start = minutes(input.appointmentTime);
-    if (input.appointmentDate < now.date || (input.appointmentDate === now.date && start <= now.minutes)) return { available: false, reason: "Choose a future appointment time." };
+    if (isPastStart(input.appointmentDate, start, now)) return { available: false, reason: "Choose a future appointment time." };
     if (!data.hours || !fitsHours(data.hours, start, data.duration)) return { available: false, reason: "Choose a time within business hours with enough time for the full appointment." };
     if (overlaps(start, data.duration, data.booked)) return { available: false, reason: "This time is no longer available. Choose another time." };
     return { available: true };

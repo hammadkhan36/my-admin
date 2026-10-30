@@ -14,7 +14,7 @@
 - Hybrid role defaults plus individual user overrides at database level
 - Automatic profile creation after an Auth user is created
 - Server-protected business and Super Admin layouts
-- Supabase session refresh through Next.js 16 `proxy.ts`
+- Supabase session refresh through Next.js 16 `proxy.ts` (`lib/supabase-proxy.ts`); `/api/public/*` and `/api/internal/*` are excluded from the matcher
 - Feature + permission filtered sidebar
 - Real Supabase-backed team list
 - Server-only Admin API member creation

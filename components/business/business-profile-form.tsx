@@ -19,7 +19,10 @@ export type BusinessProfileRow = {
   contact_email: string | null;
   contact_phone: string | null;
   address: string | null;
+  timezone: string;
 };
+
+const timeZones = ["UTC", ...Intl.supportedValuesOf("timeZone")];
 
 const initialState = {
   success: false,
@@ -57,7 +60,7 @@ export function BusinessProfileForm({
         </CardHeader>
         <CardContent>
           <form
-            key={`business-${business.id}-${business.business_name}-${business.short_name}-${business.contact_email}-${business.contact_phone}-${business.address}`}
+            key={`business-${business.id}-${business.business_name}-${business.short_name}-${business.contact_email}-${business.contact_phone}-${business.address}-${business.timezone}`}
             action={action}
             className="grid gap-4 md:grid-cols-2"
           >
@@ -118,6 +121,30 @@ export function BusinessProfileForm({
                 name="address"
                 defaultValue={business.address ?? ""}
               />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="timezone">Timezone</Label>
+              <select
+                id="timezone"
+                name="timezone"
+                defaultValue={business.timezone}
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                {timeZones.map((zone) => (
+                  <option key={zone} value={zone}>
+                    {zone}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Used for appointment slots and past-time checks.
+              </p>
+              {state.errors?.timezone?.map((error) => (
+                <p key={error} className="text-xs text-destructive">
+                  {error}
+                </p>
+              ))}
             </div>
 
             <div className="space-y-2">
