@@ -17,6 +17,11 @@ function setup(options = {}) {
           data: { contact_mode: options.mode || 'email' }, error: null,
         }) }) }),
       };
+      if (table === 'business_settings') return {
+        select: () => ({ limit: () => ({ maybeSingle: async () => ({
+          data: { default_country_code: options.countryCode || '+92' }, error: null,
+        }) }) }),
+      };
       const chain = {
         insert(row) { writes.push(row); return chain; },
         update(row) { writes.push(row); return chain; },
@@ -52,9 +57,10 @@ function setup(options = {}) {
     vm.runInNewContext(js, { exports, require: id => id in mocks ? mocks[id] : require(id), console: { error() {} } });
     return exports;
   }
-  const contact = load('lib/contacts/server.ts');
+  const phoneUtils = load('lib/phone-utils.ts');
+  const contact = load('lib/contacts/server.ts', { '@/lib/phone-utils': phoneUtils });
   const actions = load(options.lead ? 'app/(admin)/crm/leads/actions.ts' : 'app/(admin)/crm/customers/actions.ts', { '@/lib/contacts/server': contact });
-  return { actions, writes, permissions, refreshed };
+  return { actions, contact, writes, permissions, refreshed };
 }
 
 function form(fields = {}) {
@@ -123,4 +129,24 @@ test('lead without the configured primary contact is rejected', async () => {
 test('saved lead stays successful if notification/audit follow-up fails', async () => {
   const s = setup({ lead: true, auditFailure: true });
   assert.equal((await s.actions.createLead({}, form())).success, true);
+});
+
+test('local and international phone formats normalize to one E.164 number', async () => {
+  const s = setup({ mode: 'phone' });
+  for (const raw of ['03001234567', '+923001234567', '0092 300 123-4567', '(0300) 1234567', '923001234567', '3001234567']) {
+    assert.equal((await s.contact.validateContact(raw, '')).phone, '+923001234567', raw);
+  }
+});
+
+test('phone normalization follows the business default country code', async () => {
+  const s = setup({ mode: 'phone', countryCode: '+44' });
+  assert.equal((await s.contact.validateContact('07911 123456', '')).phone, '+447911123456');
+  assert.equal((await s.contact.validateContact('+14155550123', '')).phone, '+14155550123');
+});
+
+test('invalid phone numbers are rejected', async () => {
+  const s = setup({ mode: 'phone' });
+  for (const raw of ['abc', '123', '+0300123456', '03001234567890123']) {
+    await assert.rejects(s.contact.validateContact(raw, ''), /valid phone/, raw);
+  }
 });

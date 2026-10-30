@@ -244,7 +244,6 @@ import { isReleasedFeature } from "@/lib/release-features";
 
 import * as React from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { siteConfig } from "@/lib/site-config"
 import { useSupabaseConfig } from "@/components/supabase-config-provider";
@@ -401,6 +400,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const { businessSettings } = useSupabaseConfig();
   const { features } = useFeatures();
+  const brandName = businessSettings?.business_name?.trim() || siteConfig.name;
+  const brandShortName = businessSettings?.short_name?.trim() || brandName;
+  const brandLogo = businessSettings?.logo_url?.trim() || siteConfig.logo;
 
   // Filter groups based on enabled features
   const visibleGroups = menuGroups
@@ -420,10 +422,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:p-1.5!"
               render={<Link href="/dashboard" />}
             >
-              {siteConfig.logo ? (
-                <Image
-                  src={siteConfig.logo}
-                  alt={siteConfig.name}
+              {brandLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element -- admin-provided logo URL, host unknown
+                <img
+                  src={brandLogo}
+                  alt={brandName}
                   width={24}
                   height={24}
                   className="size-5 rounded"
@@ -431,7 +434,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               ) : (
                 <CommandIcon className="size-5!" />
               )}
-              <span className="text-base font-semibold">{siteConfig.shortName}</span>
+              <span className="text-base font-semibold">{brandShortName}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

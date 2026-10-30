@@ -384,7 +384,9 @@ CREATE TABLE "public"."business_settings" (
   "social_links" jsonb DEFAULT '{}'::jsonb NOT NULL,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-  "timezone" text DEFAULT 'Asia/Karachi'::text NOT NULL
+  "timezone" text DEFAULT 'Asia/Karachi'::text NOT NULL,
+  "default_country_code" text DEFAULT '+92'::text NOT NULL,
+  CONSTRAINT "business_settings_default_country_code_check" CHECK (default_country_code ~ '^\+[1-9][0-9]{0,3}$')
 );
 
 CREATE TABLE "public"."website_events" (
@@ -786,6 +788,30 @@ BEGIN
  RETURN NEW;
 END;$function$;
 
+-- Normalizes a phone number to E.164. Mirrors normalizePhone() in lib/phone-utils.ts.
+-- Local numbers (leading 0) get the business default country code.
+CREATE OR REPLACE FUNCTION public.normalize_phone(p_phone text, p_country_code text)
+ RETURNS text
+ LANGUAGE plpgsql
+ IMMUTABLE
+ SET search_path TO ''
+AS $function$
+DECLARE s text; cc text; digits text;
+BEGIN
+ s:=regexp_replace(btrim(coalesce(p_phone,'')),'[[:space:]().-]','','g');
+ IF s='' THEN RETURN NULL; END IF;
+ IF s !~ '^\+?[0-9]+$' THEN RAISE EXCEPTION 'Enter a valid phone number' USING ERRCODE='22023'; END IF;
+ cc:=regexp_replace(coalesce(p_country_code,'+92'),'[^0-9]','','g');
+ IF left(s,1)='+' THEN digits:=substr(s,2);
+ ELSIF left(s,2)='00' THEN digits:=substr(s,3);
+ ELSIF left(s,1)='0' THEN digits:=cc||substr(s,2);
+ ELSIF left(s,length(cc))=cc AND length(s)-length(cc)>=7 THEN digits:=s;
+ ELSE digits:=cc||s;
+ END IF;
+ IF digits !~ '^[1-9][0-9]{6,14}$' THEN RAISE EXCEPTION 'Enter a valid phone number' USING ERRCODE='22023'; END IF;
+ RETURN '+'||digits;
+END;$function$;
+
 CREATE OR REPLACE FUNCTION app_private.validate_customer_identity()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -799,7 +825,7 @@ BEGIN
    NEW.contact_identity_kind:=OLD.contact_identity_kind; RETURN NEW;
  END IF;
  SELECT contact_mode INTO STRICT mode FROM public.communication_settings WHERE id=true;
- NEW.phone:=nullif(regexp_replace(btrim(coalesce(NEW.phone,'')),'[[:space:]().-]','','g'),'');
+ NEW.phone:=public.normalize_phone(NEW.phone,coalesce((SELECT default_country_code FROM public.business_settings LIMIT 1),'+92'));
  NEW.email:=nullif(lower(btrim(coalesce(NEW.email,''))),'');
  IF NEW.phone IS NOT NULL AND NEW.phone !~ '^\+?[0-9]{7,15}$' THEN
    RAISE EXCEPTION 'Enter a valid phone number' USING ERRCODE='22023';
@@ -825,7 +851,7 @@ CREATE OR REPLACE FUNCTION public.resolve_business_customer(p_name text, p_phone
  SET search_path TO ''
 AS $function$
 DECLARE mode text; key text; matches uuid[]; result uuid;
- phone_value text:=nullif(regexp_replace(btrim(coalesce(p_phone,'')),'[[:space:]().-]','','g'),'');
+ phone_value text:=public.normalize_phone(p_phone,coalesce((SELECT default_country_code FROM public.business_settings LIMIT 1),'+92'));
  email_value text:=nullif(lower(btrim(coalesce(p_email,''))),'');
 BEGIN
  SELECT contact_mode INTO STRICT mode FROM public.communication_settings WHERE id=true;
@@ -943,6 +969,8 @@ ALTER TABLE "public"."faqs" ADD CONSTRAINT "faqs_pkey" PRIMARY KEY (id);
 ALTER TABLE "public"."business_hours" ADD CONSTRAINT "business_hours_day_of_week_check" CHECK (((day_of_week >= 0) AND (day_of_week <= 6)));
 
 ALTER TABLE "public"."business_hours" ADD CONSTRAINT "business_hours_day_of_week_key" UNIQUE (day_of_week);
+
+ALTER TABLE "public"."business_hours" ADD CONSTRAINT "business_hours_open_times_check" CHECK ((is_closed OR is_24h OR (opens_at IS NOT NULL AND closes_at IS NOT NULL AND closes_at > opens_at)));
 
 ALTER TABLE "public"."business_hours" ADD CONSTRAINT "business_hours_pkey" PRIMARY KEY (id);
 
@@ -1760,6 +1788,8 @@ REVOKE ALL ON FUNCTION "app_private"."queue_admin_email"() FROM PUBLIC, anon, au
 
 REVOKE ALL ON FUNCTION "app_private"."validate_customer_identity"() FROM PUBLIC, anon, authenticated, service_role;
 
+REVOKE ALL ON FUNCTION "public"."normalize_phone"(p_phone text, p_country_code text) FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION "public"."normalize_phone"(p_phone text, p_country_code text) TO "service_role";
 REVOKE ALL ON FUNCTION "public"."resolve_business_customer"(p_name text, p_phone text, p_email text, p_actor uuid) FROM PUBLIC, anon, authenticated, service_role;
 
 GRANT EXECUTE ON FUNCTION "public"."resolve_business_customer"(p_name text, p_phone text, p_email text, p_actor uuid) TO "service_role";

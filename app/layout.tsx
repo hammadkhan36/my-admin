@@ -9,15 +9,19 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 // import { FeaturesProvider } from "@/components/features-provider";
 // import { SubscriptionProvider } from "@/components/subscription-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { getBranding } from "@/lib/branding";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
-export const metadata: Metadata = {
-  title: "Admin Dashboard",
-  description: "Professional Admin Panel",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const branding = await getBranding();
+  return {
+    title: `${branding.name} Admin`,
+    description: "Admin panel",
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",

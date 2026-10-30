@@ -20,6 +20,9 @@ test('fresh schema, repeatable defaults, RLS, booking conflicts and notification
  assert.equal(await scalar(db,'SELECT count(*)::int FROM public.business_settings'),1);
  assert.equal(await scalar(db,'SELECT count(*)::int FROM public.subscriptions'),1);
  assert.equal(await scalar(db,'SELECT count(*)::int FROM public.business_hours'),7);
+ await assert.rejects(db.exec("UPDATE public.business_hours SET is_closed=false,opens_at='18:00',closes_at='02:00' WHERE day_of_week=1"),/business_hours_open_times_check/);
+ await assert.rejects(db.exec("UPDATE public.business_hours SET is_closed=false,opens_at=NULL,closes_at=NULL WHERE day_of_week=1"),/business_hours_open_times_check/);
+ await db.exec("UPDATE public.business_hours SET is_closed=false,opens_at='09:00',closes_at='17:00' WHERE day_of_week=1; UPDATE public.business_hours SET is_closed=true,opens_at=NULL,closes_at=NULL WHERE day_of_week=1");
  assert.equal(await scalar(db,"SELECT count(*)::int FROM pg_class WHERE relnamespace='public'::regnamespace AND relkind='r' AND NOT relrowsecurity"),0);
  await db.exec(`INSERT INTO auth.users(id,email) VALUES ('${owner}','owner@example.test'); UPDATE public.profiles SET role='owner',is_active=true WHERE id='${owner}'; SET request.jwt.claim.sub='${owner}'; SET ROLE authenticated;`);
  assert.equal(await scalar(db,"SELECT public.has_permission('customers.create')"),true);
@@ -238,5 +241,35 @@ test('renew_subscription is owner/superadmin only and the SEC-02 upgrade SQL is 
  assert.equal(await scalar(db,"SELECT state FROM public.subscription_status()"),'expired');
  assert.equal(await as(boss,"SELECT public.renew_subscription('test-renewal-code')"),true);
  assert.equal(await scalar(db,"SELECT state FROM public.subscription_status()"),'active');
+ }finally{await db.close();}
+});
+
+test('phone numbers normalize to E.164 in SQL like lib/phone-utils.ts',async()=>{
+ const db=new PGlite({extensions:{pgcrypto}});
+ try{
+ await db.exec(authFixture);await db.exec(schema);await db.exec(defaults);
+ assert.equal(await scalar(db,'SELECT default_country_code FROM public.business_settings'),'+92');
+ await assert.rejects(db.exec("UPDATE public.business_settings SET default_country_code='92'"),/default_country_code_check/);
+ for(const raw of ['03001234567','+923001234567','0092 300 123-4567','(0300) 1234567','923001234567','3001234567'])
+  assert.equal(await scalar(db,`SELECT public.normalize_phone('${raw}','+92')`),'+923001234567',raw);
+ assert.equal(await scalar(db,"SELECT public.normalize_phone('07911 123456','+44')"),'+447911123456');
+ assert.equal(await scalar(db,"SELECT public.normalize_phone('+14155550123','+92')"),'+14155550123');
+ assert.equal(await scalar(db,"SELECT public.normalize_phone('  ','+92') IS NULL"),true);
+ for(const raw of ['abc','123','+0300123456','03001234567890123'])
+  await assert.rejects(db.query('SELECT public.normalize_phone($1,$2)',[raw,'+92']),/valid phone/,raw);
+ const id=await scalar(db,"SELECT public.resolve_business_customer('Local Person','03001234567',null,null)");
+ assert.equal(await scalar(db,"SELECT public.resolve_business_customer('Other Name','+92 300 1234567',null,null)"),id);
+ assert.equal(await scalar(db,`SELECT phone FROM public.customers WHERE id='${id}'`),'+923001234567');
+ for(let run=0;run<2;run++)await db.exec(fs.readFileSync('Docs/database-upgrades/business_default_country_code.sql','utf8'));
+ assert.equal(await scalar(db,'SELECT default_country_code FROM public.business_settings'),'+92');
+ // Pre-fix rows (stored un-normalized) are what the read-only duplicates check must flag.
+ await db.exec("ALTER TABLE public.customers DISABLE TRIGGER USER; INSERT INTO public.customers(name,phone) VALUES ('Old A','03009990000'),('Old B','+923009990000'),('Old C','not-a-phone'); ALTER TABLE public.customers ENABLE TRIGGER USER;");
+ const dup=(await db.query(fs.readFileSync('Docs/database-upgrades/phone_duplicates_check.sql','utf8'))).rows;
+ assert.deepEqual(dup.map(r=>r.issue+':'+r.current_phone).sort(),['DUPLICATE:+923009990000','DUPLICATE:03009990000','INVALID:not-a-phone']);
+ assert.equal(await scalar(db,"SELECT count(*)::int FROM public.customers WHERE phone IN ('03009990000','+923009990000','not-a-phone')"),3);
+ await db.exec("DELETE FROM public.customers WHERE name LIKE 'Old %'");
+ await db.exec("UPDATE public.business_settings SET default_country_code='+44'");
+ const uk=await scalar(db,"SELECT public.resolve_business_customer('UK Person','07911123456',null,null)");
+ assert.equal(await scalar(db,`SELECT phone FROM public.customers WHERE id='${uk}'`),'+447911123456');
  }finally{await db.close();}
 });

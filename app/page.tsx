@@ -1,32 +1,34 @@
+/* eslint-disable @next/next/no-img-element -- logo URL is admin-provided, host unknown */
 
 
 import { LoginForm } from "@/components/login-form";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { siteConfig } from "@/lib/site-config";
-import Image from "next/image";
+import { getBranding } from "@/lib/branding";
 import Link from "next/link";
 
-export default function Home() {
+export default async function Home() {
+  const branding = await getBranding();
+
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
       {/* Left Panel - Branding */}
       <div className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gradient-to-br from-primary to-blue-900 p-10 text-white">
         <div className="relative z-10">
           <Link href="/" className="flex items-center gap-2">
-            {siteConfig.logo ? (
-              <Image
-                src={siteConfig.logo}
-                alt={siteConfig.name}
+            {branding.logo ? (
+              <img
+                src={branding.logo}
+                alt={branding.name}
                 width={40}
                 height={40}
                 className="rounded-lg"
               />
             ) : (
               <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center text-white font-bold text-xl">
-                {siteConfig.shortName.charAt(0)}
+                {branding.shortName.charAt(0)}
               </div>
             )}
-            <span className="text-xl font-semibold">{siteConfig.name}</span>
+            <span className="text-xl font-semibold">{branding.name}</span>
           </Link>
 
           <div className="mt-20">
@@ -49,7 +51,7 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 text-sm text-blue-200">
-          © {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
+          © {new Date().getFullYear()} {branding.name}. All rights reserved.
         </div>
 
         {/* Decorative circles */}
@@ -67,20 +69,20 @@ export default function Home() {
           {/* Mobile logo */}
           <div className="lg:hidden flex justify-center mb-8">
             <Link href="/" className="flex items-center gap-2">
-              {siteConfig.logo ? (
-                <Image
-                  src={siteConfig.logo}
-                  alt={siteConfig.name}
+              {branding.logo ? (
+                <img
+                  src={branding.logo}
+                  alt={branding.name}
                   width={36}
                   height={36}
                   className="rounded-lg"
                 />
               ) : (
                 <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg">
-                  {siteConfig.shortName.charAt(0)}
+                  {branding.shortName.charAt(0)}
                 </div>
               )}
-              <span className="text-lg font-semibold">{siteConfig.name}</span>
+              <span className="text-lg font-semibold">{branding.name}</span>
             </Link>
           </div>
 

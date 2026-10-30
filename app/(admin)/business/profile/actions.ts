@@ -9,6 +9,7 @@ import { requirePermission } from "@/lib/auth/server";
 import { logActivity } from "@/lib/activity-log";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { isValidTimeZone } from "@/lib/appointments/schedule";
+import { COUNTRY_CODES, isValidCountryCode } from "@/lib/phone-utils";
 import {
   actionFailure,
   actionSuccess,
@@ -33,6 +34,13 @@ const businessProfileSchema = z.object({
   favicon_url: z.string().trim().optional(),
   theme_color: z.string().trim().optional(),
   timezone: z.string().trim().refine(isValidTimeZone, "Choose a valid timezone"),
+  default_country_code: z
+    .string()
+    .trim()
+    .refine(
+      (value) => isValidCountryCode(value) && COUNTRY_CODES.some((c) => c.code === value),
+      "Choose a valid country code"
+    ),
 });
 
 function emptyToNull(value?: string) {
@@ -57,6 +65,7 @@ export async function updateBusinessProfile(
     favicon_url: formData.get("favicon_url"),
     theme_color: formData.get("theme_color"),
     timezone: formData.get("timezone"),
+    default_country_code: formData.get("default_country_code"),
   });
 
   if (!result.success) {
@@ -80,6 +89,7 @@ export async function updateBusinessProfile(
       favicon_url: emptyToNull(result.data.favicon_url),
       theme_color: result.data.theme_color || "#2563eb",
       timezone: result.data.timezone,
+      default_country_code: result.data.default_country_code,
     })
     .eq("id", result.data.id);
 
@@ -98,6 +108,7 @@ export async function updateBusinessProfile(
     details: {
       business_name: result.data.business_name,
       timezone: result.data.timezone,
+      default_country_code: result.data.default_country_code,
     },
   });
 

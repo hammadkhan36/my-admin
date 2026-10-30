@@ -1,8 +1,11 @@
 "use client";
 
+import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2, Save } from "lucide-react";
 import { updateBusinessHours } from "@/app/(admin)/business/hours/actions";
+import { FormActionAlert } from "@/components/form-action-alert";
+import { initialActionState } from "@/lib/action-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -40,6 +43,8 @@ function SaveButton() {
 }
 
 export function BusinessHoursManager({ hours }: { hours: BusinessHourRow[] }) {
+  const [state, formAction] = useActionState(updateBusinessHours, initialActionState);
+
   return (
     <div className="p-4 md:p-6">
       <div className="mb-6">
@@ -54,13 +59,15 @@ export function BusinessHoursManager({ hours }: { hours: BusinessHourRow[] }) {
           <CardTitle>Weekly Schedule</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={updateBusinessHours} className="space-y-4">
+          <form action={formAction} className="space-y-4">
+            <FormActionAlert state={state} />
             {hours.map((hour) => (
               <div
                 key={hour.id}
                 className="grid gap-3 rounded-md border p-3 md:grid-cols-[140px_1fr_1fr_auto_auto]"
               >
                 <input type="hidden" name="id" value={hour.id} />
+                <input type="hidden" name="day_name" value={hour.day_name} />
 
                 <div className="font-medium">{hour.day_name}</div>
 

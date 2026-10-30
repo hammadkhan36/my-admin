@@ -1,16 +1,12 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { normalizePhone } from "@/lib/phone-utils";
 
 export async function validateContact(
   phoneValue: string,
   emailValue: string
 ) {
-  const phone = phoneValue.trim().replace(/[\s().-]/g, "");
   const email = emailValue.trim().toLowerCase();
-
-  if (phone && !/^\+?\d{7,15}$/.test(phone)) {
-    throw new Error("Enter a valid phone number.");
-  }
 
   if (
     email &&
@@ -22,14 +18,33 @@ export async function validateContact(
     throw new Error("Enter a valid email address.");
   }
 
-  const { data, error } = await createAdminClient()
-    .from("communication_settings")
-    .select("contact_mode")
-    .eq("id", true)
-    .single();
+  const admin = createAdminClient();
+  const [settings, business] = await Promise.all([
+    admin
+      .from("communication_settings")
+      .select("contact_mode")
+      .eq("id", true)
+      .single(),
+    admin
+      .from("business_settings")
+      .select("default_country_code")
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
-  if (error || !data) {
+  const data = settings.data;
+
+  if (settings.error || !data || business.error) {
     throw new Error("Contact settings are unavailable.");
+  }
+
+  // Same E.164 form the database uses, so 0300... and +92300... match one customer.
+  const phone = phoneValue.trim()
+    ? normalizePhone(phoneValue, business.data?.default_country_code ?? "+92")
+    : "";
+
+  if (phone === null) {
+    throw new Error("Enter a valid phone number.");
   }
 
   if (data.contact_mode === "phone" && !phone) {

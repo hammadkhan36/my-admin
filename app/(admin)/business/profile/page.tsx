@@ -16,7 +16,7 @@ export default async function BusinessProfilePage() {
   const { data } = await supabase
     .from("business_settings")
     .select(
-      "id, business_name, short_name, logo_url, favicon_url, theme_color, contact_email, contact_phone, address, timezone"
+      "id, business_name, short_name, logo_url, favicon_url, theme_color, contact_email, contact_phone, address, timezone, default_country_code"
     )
     .limit(1)
     .single();

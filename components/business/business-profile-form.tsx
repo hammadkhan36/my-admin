@@ -8,6 +8,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { COUNTRY_CODES } from "@/lib/phone-utils";
 
 export type BusinessProfileRow = {
   id: string;
@@ -20,6 +21,7 @@ export type BusinessProfileRow = {
   contact_phone: string | null;
   address: string | null;
   timezone: string;
+  default_country_code: string;
 };
 
 const timeZones = ["UTC", ...Intl.supportedValuesOf("timeZone")];
@@ -60,7 +62,7 @@ export function BusinessProfileForm({
         </CardHeader>
         <CardContent>
           <form
-            key={`business-${business.id}-${business.business_name}-${business.short_name}-${business.contact_email}-${business.contact_phone}-${business.address}-${business.timezone}`}
+            key={`business-${business.id}-${business.business_name}-${business.short_name}-${business.contact_email}-${business.contact_phone}-${business.address}-${business.timezone}-${business.default_country_code}`}
             action={action}
             className="grid gap-4 md:grid-cols-2"
           >
@@ -141,6 +143,35 @@ export function BusinessProfileForm({
                 Used for appointment slots and past-time checks.
               </p>
               {state.errors?.timezone?.map((error) => (
+                <p key={error} className="text-xs text-destructive">
+                  {error}
+                </p>
+              ))}
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="default_country_code">Default country code</Label>
+              <select
+                id="default_country_code"
+                name="default_country_code"
+                defaultValue={business.default_country_code}
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                {!COUNTRY_CODES.some((c) => c.code === business.default_country_code) && (
+                  <option value={business.default_country_code}>
+                    {business.default_country_code}
+                  </option>
+                )}
+                {COUNTRY_CODES.map((country) => (
+                  <option key={country.code} value={country.code}>
+                    {country.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Added to local phone numbers that start with 0, so 0300... and +92300... match the same customer.
+              </p>
+              {state.errors?.default_country_code?.map((error) => (
                 <p key={error} className="text-xs text-destructive">
                   {error}
                 </p>
