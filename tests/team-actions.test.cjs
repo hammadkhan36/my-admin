@@ -11,6 +11,7 @@ const TARGET = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 function setup({ actorRole = 'admin', targetRole = 'manager' } = {}) {
   const writes = [];
   const authCalls = [];
+  const permissionCalls = [];
   const db = {
     auth: { admin: {
       async createUser(input) { authCalls.push(['createUser', input]); return { data: { user: { id: TARGET } }, error: null }; },
@@ -45,7 +46,7 @@ function setup({ actorRole = 'admin', targetRole = 'manager' } = {}) {
       '@/lib/supabase-admin': { createAdminClient: () => db },
       'next/cache': { revalidatePath() {} },
       'next/navigation': { unstable_rethrow() {} },
-      '@/lib/auth/server': { requirePermission: async () => ({ id: ACTOR, role: actorRole }) },
+      '@/lib/auth/server': { requirePermission: async key => { permissionCalls.push(key); return { id: ACTOR, role: actorRole }; } },
       '@/lib/activity-log': { logActivity: async () => {} },
     };
     const local = {
@@ -70,6 +71,7 @@ function setup({ actorRole = 'admin', targetRole = 'manager' } = {}) {
     perms: load('app/(admin)/team/permissions/actions.ts'),
     writes,
     authCalls,
+    permissionCalls,
   };
 }
 
@@ -117,6 +119,14 @@ test('SEC-01: owner can reset an admin password', async () => {
   const result = await s.staff.updateMemberPasswordSafe(empty, form({ memberId: TARGET, password: 'Secret12345' }));
   assert.equal(result.ok, true);
   assert.deepEqual(s.authCalls, [['updateUserById', TARGET]]);
+});
+
+test('BUG-03: password reset, deactivate and delete each check their own permission key', async () => {
+  const s = setup({ actorRole: 'owner', targetRole: 'manager' });
+  await s.staff.updateMemberPasswordSafe(empty, form({ memberId: TARGET, password: 'Secret12345' }));
+  await s.staff.setMemberActiveSafe(empty, form({ memberId: TARGET, isActive: 'true' }));
+  await s.staff.deleteTeamMemberSafe(empty, form({ memberId: TARGET }));
+  assert.deepEqual(s.permissionCalls, ['staff.reset_password', 'staff.deactivate', 'staff.delete']);
 });
 
 test('SEC-01: admin can manage a manager', async () => {

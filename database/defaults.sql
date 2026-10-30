@@ -46,6 +46,7 @@ INSERT INTO public.permissions(permission_key,feature_key,action,description) VA
 INSERT INTO public.permissions(permission_key,feature_key,action,description) VALUES ('staff.update', 'staff', 'update', 'Update team members') ON CONFLICT DO NOTHING;
 INSERT INTO public.permissions(permission_key,feature_key,action,description) VALUES ('staff.deactivate', 'staff', 'deactivate', 'Deactivate team members') ON CONFLICT DO NOTHING;
 INSERT INTO public.permissions(permission_key,feature_key,action,description) VALUES ('staff.reset_password', 'staff', 'reset_password', 'Reset a member password') ON CONFLICT DO NOTHING;
+INSERT INTO public.permissions(permission_key,feature_key,action,description) VALUES ('staff.delete', 'staff', 'delete', 'Delete team members') ON CONFLICT DO NOTHING;
 INSERT INTO public.permissions(permission_key,feature_key,action,description) VALUES ('roles.manage_overrides', 'roles', 'manage_overrides', 'Manage member permission overrides') ON CONFLICT DO NOTHING;
 INSERT INTO public.permissions(permission_key,feature_key,action,description) VALUES ('businessProfile.update', 'businessProfile', 'update', 'Update business profile') ON CONFLICT DO NOTHING;
 INSERT INTO public.permissions(permission_key,feature_key,action,description) VALUES ('businessHours.update', 'businessHours', 'update', 'Update business hours') ON CONFLICT DO NOTHING;
@@ -140,6 +141,10 @@ INSERT INTO public.role_permissions(role,permission_key,allowed) VALUES ('superv
 INSERT INTO public.role_permissions(role,permission_key,allowed) VALUES ('supervisor','reports.view',true) ON CONFLICT DO NOTHING;
 INSERT INTO public.role_permissions(role,permission_key,allowed) VALUES ('supervisor','followUps.view',true) ON CONFLICT DO NOTHING;
 INSERT INTO public.role_permissions(role,permission_key,allowed) VALUES ('supervisor','notifications.view',true) ON CONFLICT DO NOTHING;
+INSERT INTO public.role_permissions(role,permission_key,allowed) VALUES ('manager','offers.view',true) ON CONFLICT DO NOTHING;
+INSERT INTO public.role_permissions(role,permission_key,allowed) VALUES ('manager','coupons.view',true) ON CONFLICT DO NOTHING;
+INSERT INTO public.role_permissions(role,permission_key,allowed) VALUES ('supervisor','offers.view',true) ON CONFLICT DO NOTHING;
+INSERT INTO public.role_permissions(role,permission_key,allowed) VALUES ('supervisor','coupons.view',true) ON CONFLICT DO NOTHING;
 INSERT INTO public.role_permissions(role,permission_key,allowed) VALUES ('supervisor','leads.update',true) ON CONFLICT DO NOTHING;
 INSERT INTO public.role_permissions(role,permission_key,allowed) VALUES ('supervisor','customers.update',true) ON CONFLICT DO NOTHING;
 INSERT INTO public.role_permissions(role,permission_key,allowed) VALUES ('supervisor','appointments.update',true) ON CONFLICT DO NOTHING;

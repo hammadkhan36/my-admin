@@ -24,7 +24,7 @@ export default function LeadSourcesPage() {
       leads.forEach(l => {
         if (!map[l.source]) map[l.source] = { leads: 0, converted: 0 };
         map[l.source].leads++;
-        if (l.status === "Won") map[l.source].converted++;
+        if (l.status === "won") map[l.source].converted++;
       });
       const arr = Object.entries(map).map(([source, val]) => ({
         source,

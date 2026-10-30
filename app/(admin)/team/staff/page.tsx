@@ -18,6 +18,14 @@ export default async function StaffPage() {
 
   const supabase = await createClient();
 
+  // Sirf UX: buttons permission ke hisaab se dikhte hain, asal check server action mein hai.
+  const [canResetPassword, canDeactivate, canDelete] = await Promise.all(
+    ["staff.reset_password", "staff.deactivate", "staff.delete"].map(async (key) => {
+      const { data } = await supabase.rpc("has_permission", { requested_permission: key });
+      return data === true;
+    })
+  );
+
   const { data } = await supabase
     .from("profiles")
     .select("id, full_name, email, role, is_active, created_at")
@@ -28,6 +36,9 @@ export default async function StaffPage() {
       actorId={actor.id}
       actorRole={actor.role}
       members={(data ?? []) as TeamMember[]}
+      canResetPassword={canResetPassword}
+      canDeactivate={canDeactivate}
+      canDelete={canDelete}
     />
   );
 }

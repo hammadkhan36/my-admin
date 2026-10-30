@@ -21,7 +21,6 @@ type FeatureSetting = {
   feature_key: string;
   enabled: boolean;
   locked: boolean;
-  unlock_code: string | null;
 };
 
 type Subscription = {
@@ -39,7 +38,7 @@ type SupabaseConfigContextType = {
   subscription: Subscription | null;
   refreshData: () => Promise<void>;
   updateBusinessSetting: (field: string, value: string) => Promise<void>;
-  updateFeatureSetting: (key: string, enabled: boolean, locked: boolean, unlockCode?: string | null) => Promise<void>;
+  updateFeatureSetting: (key: string, enabled: boolean, locked: boolean) => Promise<void>;
   updateSubscription: (sub: Partial<Subscription>) => Promise<void>;
 };
 
@@ -89,12 +88,11 @@ export function SupabaseConfigProvider({ children }: { children: React.ReactNode
   const updateFeatureSetting = async (
     key: string,
     enabled: boolean,
-    locked: boolean,
-    unlockCode?: string | null
+    locked: boolean
   ) => {
     const { error } = await supabase
       .from("feature_settings")
-      .update({ enabled, locked, unlock_code: unlockCode })
+      .update({ enabled, locked })
       .eq("feature_key", key);
     if (error) throw error;
     await refreshData();

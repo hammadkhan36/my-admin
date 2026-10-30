@@ -27,7 +27,6 @@ type FeatureSetting = {
   feature_key: string;
   enabled: boolean;
   locked: boolean;
-  unlock_code: string | null;
 };
 
 type Subscription = {
@@ -288,8 +287,8 @@ export default async function SuperAdminDashboard() {
                 <Card key={feature.feature_key}>
                   <CardContent className="p-4">
                     <form
-                      key={`feature-${feature.feature_key}-${feature.enabled}-${feature.locked}-${feature.unlock_code}`}
-                      action={updateFeatureSetting} className="grid gap-4 md:grid-cols-[1fr_auto_auto_220px_auto] md:items-end">
+                      key={`feature-${feature.feature_key}-${feature.enabled}-${feature.locked}`}
+                      action={updateFeatureSetting} className="grid gap-4 md:grid-cols-[1fr_auto_auto_auto] md:items-end">
                       <input type="hidden" name="feature_key" value={feature.feature_key} />
 
                       <div>
@@ -308,15 +307,6 @@ export default async function SuperAdminDashboard() {
                         <Switch name="locked" defaultChecked={feature.locked} />
                         Locked
                       </label>
-
-                      <div className="space-y-2">
-                        <Label htmlFor={`unlock-${feature.feature_key}`}>Unlock Code</Label>
-                        <Input
-                          id={`unlock-${feature.feature_key}`}
-                          name="unlock_code"
-                          defaultValue={feature.unlock_code ?? ""}
-                        />
-                      </div>
 
                       <PendingSubmitButton size="sm" pendingText="Saving...">
                         Save

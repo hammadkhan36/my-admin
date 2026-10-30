@@ -214,7 +214,7 @@
 //   const isFeatureUnlocked = (key: FeatureKey) => isUnlocked(key);
 
 //   return (
-//     <FeaturesContext.Provider value={{ features, toggleFeature, setFeature, unlockFeature, isFeatureUnlocked }}>
+//     <FeaturesContext.Provider value={{ features, toggleFeature, setFeature, isFeatureUnlocked }}>
 //       {children}
 //     </FeaturesContext.Provider>
 //   );
@@ -241,7 +241,6 @@ type FeaturesContextType = {
   features: Record<FeatureKey, boolean>;
   toggleFeature: (key: FeatureKey) => void;
   setFeature: (key: FeatureKey, value: boolean) => void;
-  unlockFeature: (key: FeatureKey, code: string) => Promise<boolean>;
   isFeatureUnlocked: (key: FeatureKey) => boolean;
 };
 
@@ -250,7 +249,6 @@ const FeaturesContext = React.createContext<FeaturesContextType | null>(null);
 export function FeaturesProvider({ children }: { children: React.ReactNode }) {
   const { featureSettings } = useSupabaseConfig();
   const [features, setFeatures] = React.useState<Record<FeatureKey, boolean>>({} as Record<FeatureKey, boolean>);
-  const [unlocked, setUnlocked] = React.useState<Record<string, boolean>>({});
 
   React.useEffect(() => {
     const featureMap: Record<string, boolean> = {};
@@ -268,21 +266,12 @@ export function FeaturesProvider({ children }: { children: React.ReactNode }) {
     setFeatures((prev) => ({ ...prev, [key]: value }));
   };
 
-  const unlockFeature = async (key: FeatureKey, code: string) => {
-    const setting = featureSettings.find((fs) => fs.feature_key === key);
-    if (setting?.unlock_code === code) {
-      setUnlocked((prev) => ({ ...prev, [key]: true }));
-      return true;
-    }
-    return false;
-  };
-
   const isFeatureUnlocked = (key: FeatureKey) => {
-    return !!unlocked[key] || !featureSettings.find((fs) => fs.feature_key === key)?.locked;
+    return !featureSettings.find((fs) => fs.feature_key === key)?.locked;
   };
 
   return (
-    <FeaturesContext.Provider value={{ features, toggleFeature, setFeature, unlockFeature, isFeatureUnlocked }}>
+    <FeaturesContext.Provider value={{ features, toggleFeature, setFeature, isFeatureUnlocked }}>
       {children}
     </FeaturesContext.Provider>
   );

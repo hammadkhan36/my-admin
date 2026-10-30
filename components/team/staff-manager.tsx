@@ -110,10 +110,16 @@ export function StaffManager({
     actorId,
     actorRole,
     members,
+    canResetPassword,
+    canDeactivate,
+    canDelete,
 }: {
     actorId: string;
     actorRole: AppRole;
     members: TeamMember[];
+    canResetPassword: boolean;
+    canDeactivate: boolean;
+    canDelete: boolean;
 }) {
     const [showForm, setShowForm] = useState(false);
     const roleOptions = assignableRoles(actorRole);
@@ -291,29 +297,31 @@ export function StaffManager({
                                         {/* Sirf UX: asal rank check server action mein hai. */}
                                         {member.id !== actorId && canManageRole(actorRole, member.role) && (
                                             <div className="flex justify-end gap-2">
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() =>
-                                                        setPasswordMemberId(
-                                                            passwordMemberId === member.id ? null : member.id
-                                                        )
-                                                    }
-                                                >
-                                                    <KeyRound className="mr-1 h-3.5 w-3.5" />
-                                                    Password
-                                                </Button>
+                                                {canResetPassword && (
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() =>
+                                                            setPasswordMemberId(
+                                                                passwordMemberId === member.id ? null : member.id
+                                                            )
+                                                        }
+                                                    >
+                                                        <KeyRound className="mr-1 h-3.5 w-3.5" />
+                                                        Password
+                                                    </Button>
+                                                )}
 
-                                                <MemberStatusForm member={member} />
+                                                {canDeactivate && <MemberStatusForm member={member} />}
 
-                                                <MemberDeleteForm member={member} />
+                                                {canDelete && <MemberDeleteForm member={member} />}
                                             </div>
                                         )}
                                     </TableCell>
                                 </TableRow>
 
-                                {passwordMemberId === member.id && (
+                                {canResetPassword && passwordMemberId === member.id && (
                                     <TableRow>
                                         <TableCell colSpan={5} className="bg-muted/40">
                                             <MemberPasswordForm member={member} />

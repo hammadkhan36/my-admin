@@ -32,7 +32,6 @@ const featureSchema = z.object({
   feature_key: z.string().min(2),
   enabled: z.boolean(),
   locked: z.boolean(),
-  unlock_code: z.string().trim().nullable(),
 });
 
 function nullableString(value: FormDataEntryValue | null) {
@@ -157,7 +156,6 @@ export async function updateFeatureSetting(formData: FormData) {
     feature_key: formData.get("feature_key"),
     enabled: checkboxValue(formData.get("enabled")),
     locked: checkboxValue(formData.get("locked")),
-    unlock_code: nullableString(formData.get("unlock_code")),
   });
 
   if (!result.success) {
@@ -171,7 +169,6 @@ export async function updateFeatureSetting(formData: FormData) {
     .update({
       enabled: result.data.enabled,
       locked: result.data.locked,
-      unlock_code: result.data.unlock_code,
     })
     .eq("feature_key", result.data.feature_key);
 

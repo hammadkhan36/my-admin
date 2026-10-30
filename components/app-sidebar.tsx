@@ -321,7 +321,7 @@ const menuGroups: { label: string; items: MenuItem[] }[] = [
       { title: "Customers", url: "/crm/customers", icon: UserIcon, featureKey: "customers" },
       { title: "Notifications", url: "/crm/notifications", icon: BellIcon, featureKey: "notifications" },
 
-      { title: "Forms", url: "/crm/forms", icon: FileTextIcon, featureKey: "forms" }, // new (optional)
+      { title: "Forms", url: "/website/forms", icon: FileTextIcon, featureKey: "forms" }, // new (optional)
       { title: "Follow-ups", url: "/crm/follow-ups", icon: CalendarClock, featureKey: "followUps" }, // new 
       { title: "Lead Sources", url: "/crm/lead-sources", icon: TrendingUpIcon, featureKey: "leadSources" }, // new analytics
       { title: "Services", url: "/crm/services", icon: WrenchIcon, featureKey: "services" }, // new management

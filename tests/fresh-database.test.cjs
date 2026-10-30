@@ -104,3 +104,65 @@ test('upgrade SQL moves the renewal hash, is repeatable and keeps the old code w
  assert.equal(await scalar(db,"SELECT public.renew_subscription('old-renewal-code')"),true);
  }finally{await db.close();}
 });
+
+async function can(db,user,key){
+ await db.exec(`SET request.jwt.claim.sub='${user}'; SET ROLE authenticated;`);
+ try{return await scalar(db,`SELECT public.has_permission('${key}')`);}finally{await db.exec('RESET ROLE;');}
+}
+async function withRoles(db){
+ const ids={};
+ for(const [i,role] of ['admin','manager','supervisor','staff'].entries()){
+  const id=`2222222${i}-2222-4222-8222-222222222222`;
+  await db.exec(`INSERT INTO auth.users(id,email) VALUES ('${id}','${role}@example.test'); UPDATE public.profiles SET role='${role}',is_active=true WHERE id='${id}';`);
+  ids[role]=id;
+ }
+ return ids;
+}
+test('manager and supervisor can open Offers and Coupons; only manager can manage; campaigns stay admin-only',async()=>{
+ const db=new PGlite({extensions:{pgcrypto}});
+ try{
+ await db.exec(authFixture);await db.exec(schema);await db.exec(defaults);
+ const u=await withRoles(db);
+ for(const key of ['offers.view','coupons.view']){
+  assert.equal(await can(db,u.manager,key),true);
+  assert.equal(await can(db,u.supervisor,key),true);
+  assert.equal(await can(db,u.staff,key),false);
+ }
+ for(const key of ['offers.manage','coupons.manage']){
+  assert.equal(await can(db,u.manager,key),true);
+  assert.equal(await can(db,u.supervisor,key),false);
+ }
+ assert.equal(await can(db,u.manager,'campaigns.view'),false);
+ }finally{await db.close();}
+});
+test('staff.delete exists but no role has it; admin can reset passwords; a delete override no longer breaks the FK',async()=>{
+ const db=new PGlite({extensions:{pgcrypto}});
+ try{
+ await db.exec(authFixture);await db.exec(schema);await db.exec(defaults);
+ const u=await withRoles(db);
+ assert.equal(await scalar(db,"SELECT count(*)::int FROM public.permissions WHERE permission_key='staff.delete'"),1);
+ assert.equal(await scalar(db,"SELECT count(*)::int FROM public.role_permissions WHERE permission_key='staff.delete'"),0);
+ assert.equal(await can(db,u.admin,'staff.delete'),false);
+ assert.equal(await can(db,u.admin,'staff.reset_password'),true);
+ assert.equal(await can(db,u.manager,'staff.reset_password'),false);
+ await db.exec(`INSERT INTO public.user_permission_overrides(user_id,permission_key,allowed) VALUES ('${u.admin}','staff.delete',true);`);
+ assert.equal(await can(db,u.admin,'staff.delete'),true);
+ }finally{await db.close();}
+});
+test('marketing and staff permission upgrade SQL fixes an old database and is repeatable',async()=>{
+ const db=new PGlite({extensions:{pgcrypto}});
+ try{
+ await db.exec(authFixture);await db.exec(schema);await db.exec(defaults);
+ const u=await withRoles(db);
+ await db.exec("DELETE FROM public.role_permissions WHERE permission_key IN ('offers.view','coupons.view') AND role IN ('manager','supervisor'); DELETE FROM public.role_permissions WHERE permission_key='staff.reset_password'; DELETE FROM public.permissions WHERE permission_key IN ('staff.delete','staff.reset_password');");
+ assert.equal(await can(db,u.manager,'offers.view'),false);
+ const upgrade=fs.readFileSync('Docs/database-upgrades/fix_marketing_and_staff_permissions.sql','utf8');
+ await db.exec(upgrade);await db.exec(upgrade);
+ assert.equal(await can(db,u.manager,'coupons.view'),true);
+ assert.equal(await can(db,u.supervisor,'offers.view'),true);
+ assert.equal(await can(db,u.supervisor,'offers.manage'),false);
+ assert.equal(await can(db,u.admin,'staff.reset_password'),true);
+ assert.equal(await scalar(db,"SELECT count(*)::int FROM public.permissions WHERE permission_key='staff.delete'"),1);
+ assert.equal(await scalar(db,"SELECT count(*)::int FROM public.role_permissions WHERE permission_key='staff.delete'"),0);
+ }finally{await db.close();}
+});

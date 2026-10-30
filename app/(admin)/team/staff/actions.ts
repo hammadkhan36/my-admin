@@ -165,7 +165,7 @@ const updatePasswordSchema = z.object({
 });
 
 export async function updateMemberPassword(formData: FormData) {
-  const actor = await requirePermission("staff.update");
+  const actor = await requirePermission("staff.reset_password");
 
   const result = updatePasswordSchema.safeParse({
     memberId: formData.get("memberId"),
