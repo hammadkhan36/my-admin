@@ -5,24 +5,28 @@
 
 // email_confirm: true ka matlab user ko email verification ki zaroorat nahi.
 
-// superadmin aur owner create nahi ho sakte, kyun ke form sirf admin, manager, 
-// supervisor, staff allow karta hai.
+// Rank rule (lib/auth/roles.ts): actor sirf apne se neeche rank wala role bana
+// sakta hai. Admin manager/supervisor/staff bana sakta hai, admin sirf owner/superadmin.
 
-// setMemberActive kisi member ko active/inactive karta hai. 
-// Owner aur superadmin ko dashboard se deactivate nahi kar sakte.
+// setMemberActive kisi member ko active/inactive karta hai.
 
+// updateMemberPassword selected member ka password change karega.
 
-// updateMemberPassword selected staff/admin ka password change karega.
+// deleteTeamMember member ko Supabase Auth se delete karega.
 
-// deleteTeamMember member ko Supabase Auth se delete karega. superadmin aur owner delete nahi honge.
+// Teeno par assertCanManageMember lagta hai: apna account nahi, aur barabar ya
+// upar rank wala member nahi. Fail hone par Error throw hota hai, jo *Safe
+// wrapper form mein message bana deta hai.
 
 
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { requirePermission } from "@/lib/auth/server";
-import { DASHBOARD_CREATABLE_ROLES } from "@/lib/auth/roles";
+import { assertCanManageMember } from "@/lib/auth/member-guard";
+import { DASHBOARD_CREATABLE_ROLES, assignableRoles } from "@/lib/auth/roles";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { logActivity } from "@/lib/activity-log";
 import {
@@ -56,7 +60,7 @@ export async function createTeamMember(
   const actor = await requirePermission("staff.create");
 
   const result = createMemberSchema.safeParse({
-    fullName: formData.get("fullName"),
+    fullName: formData.get("fullName") ?? formData.get("full_name"),
     email: formData.get("email"),
     password: formData.get("password"),
     role: formData.get("role"),
@@ -64,6 +68,13 @@ export async function createTeamMember(
 
   if (!result.success) {
     return { success: false, errors: result.error.flatten().fieldErrors };
+  }
+
+  if (!assignableRoles(actor.role).includes(result.data.role)) {
+    return {
+      success: false,
+      message: "You cannot create a member with an equal or higher role.",
+    };
   }
 
   const admin = createAdminClient();
@@ -123,21 +134,9 @@ export async function createTeamMember(
 export async function setMemberActive(memberId: string, isActive: boolean) {
   const actor = await requirePermission("staff.deactivate");
 
-  if (!z.string().uuid().safeParse(memberId).success || memberId === actor.id) {
-    return;
-  }
+  await assertCanManageMember(actor, memberId);
 
   const admin = createAdminClient();
-
-  const { data: target } = await admin
-    .from("profiles")
-    .select("role")
-    .eq("id", memberId)
-    .maybeSingle();
-
-  if (!target || target.role === "superadmin" || target.role === "owner") {
-    return;
-  }
 
   await admin
     .from("profiles")
@@ -174,28 +173,22 @@ export async function updateMemberPassword(formData: FormData) {
   });
 
   if (!result.success) {
-    return;
+    throw new Error(
+      result.error.flatten().fieldErrors.password?.[0] ?? "Invalid password data."
+    );
   }
 
-  if (result.data.memberId === actor.id) {
-    return;
-  }
+  await assertCanManageMember(actor, result.data.memberId);
 
   const admin = createAdminClient();
 
-  const { data: target } = await admin
-    .from("profiles")
-    .select("role")
-    .eq("id", result.data.memberId)
-    .maybeSingle();
-
-  if (!target || target.role === "superadmin" || target.role === "owner") {
-    return;
-  }
-
-  await admin.auth.admin.updateUserById(result.data.memberId, {
+  const { error } = await admin.auth.admin.updateUserById(result.data.memberId, {
     password: result.data.password,
   });
+
+  if (error) {
+    throw new Error("Password could not be updated.");
+  }
 
   await logActivity({
     actorId: actor.id,
@@ -210,21 +203,9 @@ export async function updateMemberPassword(formData: FormData) {
 export async function deleteTeamMember(memberId: string) {
   const actor = await requirePermission("staff.delete");
 
-  if (!z.string().uuid().safeParse(memberId).success || memberId === actor.id) {
-    return;
-  }
+  await assertCanManageMember(actor, memberId);
 
   const admin = createAdminClient();
-
-  const { data: target } = await admin
-    .from("profiles")
-    .select("role")
-    .eq("id", memberId)
-    .maybeSingle();
-
-  if (!target || target.role === "superadmin" || target.role === "owner") {
-    return;
-  }
 
   await admin.from("profiles").update({ is_active: false }).eq("id", memberId);
 
@@ -262,6 +243,7 @@ export async function createTeamMemberSafe(
 
     return actionSuccess(result?.message || "Team member created successfully.");
   } catch (error) {
+    unstable_rethrow(error);
     return actionFailure(getErrorMessage(error, "Team member could not be created."));
   }
 }
@@ -286,6 +268,7 @@ export async function setMemberActiveSafe(
         : "Team member activated successfully."
     );
   } catch (error) {
+    unstable_rethrow(error);
     return actionFailure(getErrorMessage(error, "Team member status could not be updated."));
   }
 }
@@ -306,6 +289,7 @@ export async function updateMemberPasswordSafe(
 
     return actionSuccess("Password updated successfully.");
   } catch (error) {
+    unstable_rethrow(error);
     return actionFailure(getErrorMessage(error, "Password could not be updated."));
   }
 }
@@ -325,6 +309,7 @@ export async function deleteTeamMemberSafe(
 
     return actionSuccess("Team member deleted successfully.");
   } catch (error) {
+    unstable_rethrow(error);
     return actionFailure(getErrorMessage(error, "Team member could not be deleted."));
   }
 }

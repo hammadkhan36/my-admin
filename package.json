@@ -9,7 +9,7 @@
     "lint": "eslint",
     "check:setup": "node --env-file-if-exists=.env.local scripts/check-setup.mjs admin",
     "test:database": "node --test tests/fresh-database.test.cjs",
-    "test:core": "node --test tests/customer-actions.test.cjs tests/appointment-schedule.test.cjs"
+    "test:core": "node --test tests/customer-actions.test.cjs tests/appointment-schedule.test.cjs tests/team-actions.test.cjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -37,7 +37,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "0.5.8",
+    "@electric-sql/pglite": "^0.5.8",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

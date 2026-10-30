@@ -269,16 +269,22 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2 } from "lucide-react";
 import type { AppRole } from "@/lib/auth/roles";
-import { DASHBOARD_CREATABLE_ROLES } from "@/lib/auth/roles";
+import {
+  assignableRoles,
+  canGrantPermissionKey,
+  canManageRole,
+} from "@/lib/auth/roles";
 import {
   removePermissionOverride,
   setPermissionOverride,
   updateMemberRole,
 } from "@/app/(admin)/team/permissions/actions";
+import { initialActionState } from "@/lib/action-state";
+import { FormActionAlert } from "@/components/form-action-alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -347,20 +353,164 @@ function SubmitButton({
   );
 }
 
+function MemberRoleForm({
+  member,
+  roles,
+}: {
+  member: PermissionMember;
+  roles: AppRole[];
+}) {
+  const [state, formAction] = useActionState(
+    updateMemberRole,
+    initialActionState
+  );
+
+  return (
+    <form action={formAction} className="space-y-3">
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <input type="hidden" name="memberId" value={member.id} />
+        <select
+          name="role"
+          defaultValue={member.role}
+          className="h-10 rounded-md border bg-background px-3 text-sm capitalize"
+        >
+          {roles.map((role) => (
+            <option key={role} value={role}>
+              {role}
+            </option>
+          ))}
+        </select>
+        <SubmitButton pendingText="Updating...">Update Role</SubmitButton>
+      </div>
+      <FormActionAlert state={state} />
+    </form>
+  );
+}
+
+function PermissionOverrideRow({
+  member,
+  permission,
+  defaultAllowed,
+  override,
+  canChange,
+}: {
+  member: PermissionMember;
+  permission: PermissionRow;
+  defaultAllowed: boolean;
+  override: UserOverrideRow | undefined;
+  canChange: boolean;
+}) {
+  const [allowState, allowAction] = useActionState(
+    setPermissionOverride,
+    initialActionState
+  );
+  const [denyState, denyAction] = useActionState(
+    setPermissionOverride,
+    initialActionState
+  );
+  const [resetState, resetAction] = useActionState(
+    removePermissionOverride,
+    initialActionState
+  );
+
+  const finalAllowed = override ? override.allowed : defaultAllowed;
+
+  return (
+    <div className="space-y-2 border-b pb-3 last:border-0">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+        <div>
+          <div className="font-mono text-sm font-medium">
+            {permission.permission_key}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Default: {defaultAllowed ? "Allowed" : "Denied"} |
+            Final: {finalAllowed ? "Allowed" : "Denied"}
+            {override ? " | Custom override" : ""}
+          </div>
+        </div>
+
+        {canChange ? (
+          <div className="flex gap-2">
+            <form action={allowAction}>
+              <input type="hidden" name="memberId" value={member.id} />
+              <input
+                type="hidden"
+                name="permissionKey"
+                value={permission.permission_key}
+              />
+              <input type="hidden" name="allowed" value="true" />
+              <SubmitButton
+                size="sm"
+                variant={finalAllowed ? "default" : "outline"}
+                pendingText="Allowing..."
+              >
+                Allow
+              </SubmitButton>
+            </form>
+
+            <form action={denyAction}>
+              <input type="hidden" name="memberId" value={member.id} />
+              <input
+                type="hidden"
+                name="permissionKey"
+                value={permission.permission_key}
+              />
+              <input type="hidden" name="allowed" value="false" />
+              <SubmitButton
+                size="sm"
+                variant={!finalAllowed ? "destructive" : "outline"}
+                pendingText="Denying..."
+              >
+                Deny
+              </SubmitButton>
+            </form>
+
+            {override && (
+              <form action={resetAction}>
+                <input type="hidden" name="memberId" value={member.id} />
+                <input
+                  type="hidden"
+                  name="permissionKey"
+                  value={permission.permission_key}
+                />
+                <SubmitButton size="sm" variant="ghost" pendingText="Resetting...">
+                  Reset
+                </SubmitButton>
+              </form>
+            )}
+          </div>
+        ) : (
+          <span className="text-xs text-muted-foreground">Owner only</span>
+        )}
+      </div>
+
+      <FormActionAlert state={allowState} />
+      <FormActionAlert state={denyState} />
+      <FormActionAlert state={resetState} />
+    </div>
+  );
+}
+
 export function MemberPermissionsManager({
+  actorId,
+  actorRole,
   members,
   permissions,
   rolePermissions,
   overrides,
 }: {
+  actorId: string;
+  actorRole: AppRole;
   members: PermissionMember[];
   permissions: PermissionRow[];
   rolePermissions: RolePermissionRow[];
   overrides: UserOverrideRow[];
 }) {
+  // Sirf UX ke liye: asal check server actions (assertCanManageMember) mein hai.
   const editableMembers = members.filter(
-    (member) => member.role !== "superadmin" && member.role !== "owner"
+    (member) => member.id !== actorId && canManageRole(actorRole, member.role)
   );
+  const roleOptions = assignableRoles(actorRole);
 
   const [selectedMemberId, setSelectedMemberId] = useState(
     editableMembers[0]?.id ?? ""
@@ -464,28 +614,11 @@ export function MemberPermissionsManager({
                 <CardTitle className="text-base">Member Role</CardTitle>
               </CardHeader>
               <CardContent>
-                <form
-                  action={updateMemberRole}
-                  className="flex flex-col gap-3 sm:flex-row"
-                >
-                  <input
-                    type="hidden"
-                    name="memberId"
-                    value={selectedMember.id}
-                  />
-                  <select
-                    name="role"
-                    defaultValue={selectedMember.role}
-                    className="h-10 rounded-md border bg-background px-3 text-sm capitalize"
-                  >
-                    {DASHBOARD_CREATABLE_ROLES.map((role) => (
-                      <option key={role} value={role}>
-                        {role}
-                      </option>
-                    ))}
-                  </select>
-                  <SubmitButton pendingText="Updating...">Update Role</SubmitButton>
-                </form>
+                <MemberRoleForm
+                  key={selectedMember.id}
+                  member={selectedMember}
+                  roles={roleOptions}
+                />
               </CardContent>
             </Card>
           )}
@@ -500,118 +633,25 @@ export function MemberPermissionsManager({
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {modulePermissions.map((permission) => {
-                      const defaultAllowed = roleAllows(
-                        selectedMember.role,
-                        permission.permission_key
-                      );
-                      const override = getOverride(
-                        selectedMember.id,
-                        permission.permission_key
-                      );
-                      const finalAllowed = override
-                        ? override.allowed
-                        : defaultAllowed;
-
-                      return (
-                        <div
-                          key={permission.permission_key}
-                          className="flex flex-col justify-between gap-3 border-b pb-3 last:border-0 sm:flex-row sm:items-center"
-                        >
-                          <div>
-                            <div className="font-mono text-sm font-medium">
-                              {permission.permission_key}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Default: {defaultAllowed ? "Allowed" : "Denied"} |
-                              Final: {finalAllowed ? "Allowed" : "Denied"}
-                              {override ? " | Custom override" : ""}
-                            </div>
-                          </div>
-
-                          <div className="flex gap-2">
-                            {/* Allow form */}
-                            <form action={setPermissionOverride}>
-                              <input
-                                type="hidden"
-                                name="memberId"
-                                value={selectedMember.id}
-                              />
-                              <input
-                                type="hidden"
-                                name="permissionKey"
-                                value={permission.permission_key}
-                              />
-                              <input
-                                type="hidden"
-                                name="allowed"
-                                value="true"
-                              />
-                              <SubmitButton
-                                size="sm"
-                                variant={
-                                  finalAllowed ? "default" : "outline"
-                                }
-                                pendingText="Allowing..."
-                              >
-                                Allow
-                              </SubmitButton>
-                            </form>
-
-                            {/* Deny form */}
-                            <form action={setPermissionOverride}>
-                              <input
-                                type="hidden"
-                                name="memberId"
-                                value={selectedMember.id}
-                              />
-                              <input
-                                type="hidden"
-                                name="permissionKey"
-                                value={permission.permission_key}
-                              />
-                              <input
-                                type="hidden"
-                                name="allowed"
-                                value="false"
-                              />
-                              <SubmitButton
-                                size="sm"
-                                variant={
-                                  !finalAllowed ? "destructive" : "outline"
-                                }
-                                pendingText="Denying..."
-                              >
-                                Deny
-                              </SubmitButton>
-                            </form>
-
-                            {/* Reset form (only if override exists) */}
-                            {override && (
-                              <form action={removePermissionOverride}>
-                                <input
-                                  type="hidden"
-                                  name="memberId"
-                                  value={selectedMember.id}
-                                />
-                                <input
-                                  type="hidden"
-                                  name="permissionKey"
-                                  value={permission.permission_key}
-                                />
-                                <SubmitButton
-                                  size="sm"
-                                  variant="ghost"
-                                  pendingText="Resetting..."
-                                >
-                                  Reset
-                                </SubmitButton>
-                              </form>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {modulePermissions.map((permission) => (
+                      <PermissionOverrideRow
+                        key={`${selectedMember.id}:${permission.permission_key}`}
+                        member={selectedMember}
+                        permission={permission}
+                        defaultAllowed={roleAllows(
+                          selectedMember.role,
+                          permission.permission_key
+                        )}
+                        override={getOverride(
+                          selectedMember.id,
+                          permission.permission_key
+                        )}
+                        canChange={canGrantPermissionKey(
+                          actorRole,
+                          permission.permission_key
+                        )}
+                      />
+                    ))}
                   </CardContent>
                 </Card>
               )

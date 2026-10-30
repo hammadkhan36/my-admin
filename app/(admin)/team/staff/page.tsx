@@ -14,7 +14,7 @@ import { requirePermission } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase-server";
 
 export default async function StaffPage() {
-  await requirePermission("staff.view");
+  const actor = await requirePermission("staff.view");
 
   const supabase = await createClient();
 
@@ -23,5 +23,11 @@ export default async function StaffPage() {
     .select("id, full_name, email, role, is_active, created_at")
     .order("created_at", { ascending: true });
 
-  return <StaffManager members={(data ?? []) as TeamMember[]} />;
+  return (
+    <StaffManager
+      actorId={actor.id}
+      actorRole={actor.role}
+      members={(data ?? []) as TeamMember[]}
+    />
+  );
 }

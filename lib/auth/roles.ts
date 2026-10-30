@@ -36,3 +36,38 @@ export function isAppRole(value: unknown): value is AppRole {
     APP_ROLES.includes(value as AppRole)
   );
 }
+
+// Bara number = bara rank. Actor sirf apne se neeche wale rank ko manage kar sakta hai.
+export const ROLE_RANK: Record<AppRole, number> = {
+  superadmin: 6,
+  owner: 5,
+  admin: 4,
+  manager: 3,
+  supervisor: 2,
+  staff: 1,
+};
+
+export const FULL_ACCESS_ROLES: AppRole[] = ["superadmin", "owner"];
+
+export function canManageRole(actorRole: AppRole, targetRole: AppRole) {
+  return ROLE_RANK[actorRole] > ROLE_RANK[targetRole];
+}
+
+export function assignableRoles(actorRole: AppRole): AppRole[] {
+  return DASHBOARD_CREATABLE_ROLES.filter((role) =>
+    canManageRole(actorRole, role)
+  );
+}
+
+// staff.* aur roles.* keys se koi doosron ko manage kar sakta hai, is liye
+// inki override sirf owner/superadmin de ya hata sakte hain.
+export function isSensitivePermissionKey(permissionKey: string) {
+  return permissionKey.startsWith("staff.") || permissionKey.startsWith("roles.");
+}
+
+export function canGrantPermissionKey(actorRole: AppRole, permissionKey: string) {
+  return (
+    !isSensitivePermissionKey(permissionKey) ||
+    FULL_ACCESS_ROLES.includes(actorRole)
+  );
+}

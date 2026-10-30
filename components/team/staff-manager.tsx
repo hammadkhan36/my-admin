@@ -6,11 +6,14 @@ import { KeyRound, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
     createTeamMember,
-    deleteTeamMember,
-    setMemberActive,
-    updateMemberPassword,
+    deleteTeamMemberSafe,
+    setMemberActiveSafe,
+    updateMemberPasswordSafe,
 } from "@/app/(admin)/team/staff/actions";
 import type { AppRole } from "@/lib/auth/roles";
+import { assignableRoles, canManageRole } from "@/lib/auth/roles";
+import { initialActionState } from "@/lib/action-state";
+import { FormActionAlert } from "@/components/form-action-alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,8 +47,76 @@ const initialState = {
     success: false,
 };
 
-export function StaffManager({ members }: { members: TeamMember[] }) {
+function MemberStatusForm({ member }: { member: TeamMember }) {
+    const [state, action] = useActionState(setMemberActiveSafe, initialActionState);
+
+    return (
+        <form action={action}>
+            <input type="hidden" name="memberId" value={member.id} />
+            <input type="hidden" name="isActive" value={String(member.is_active)} />
+            <Button type="submit" size="sm" variant="outline">
+                {member.is_active ? "Deactivate" : "Activate"}
+            </Button>
+            <FormActionAlert state={state} />
+        </form>
+    );
+}
+
+function MemberDeleteForm({ member }: { member: TeamMember }) {
+    const [state, action] = useActionState(deleteTeamMemberSafe, initialActionState);
+
+    return (
+        <form action={action}>
+            <input type="hidden" name="memberId" value={member.id} />
+            <ConfirmSubmitButton message="Delete this item?">
+                <Trash2 className="mr-1 h-3.5 w-3.5" />
+                Delete
+            </ConfirmSubmitButton>
+            <FormActionAlert state={state} />
+        </form>
+    );
+}
+
+function MemberPasswordForm({ member }: { member: TeamMember }) {
+    const [state, action] = useActionState(updateMemberPasswordSafe, initialActionState);
+
+    return (
+        <form action={action} className="space-y-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <input type="hidden" name="memberId" value={member.id} />
+
+                <div className="space-y-1">
+                    <Label htmlFor={`password-${member.id}`}>
+                        New temporary password
+                    </Label>
+                    <Input
+                        id={`password-${member.id}`}
+                        name="password"
+                        type="password"
+                        placeholder="Example: Staff12345"
+                        required
+                        className="w-full sm:w-72"
+                    />
+                </div>
+
+                <Button type="submit">Update Password</Button>
+            </div>
+            <FormActionAlert state={state} />
+        </form>
+    );
+}
+
+export function StaffManager({
+    actorId,
+    actorRole,
+    members,
+}: {
+    actorId: string;
+    actorRole: AppRole;
+    members: TeamMember[];
+}) {
     const [showForm, setShowForm] = useState(false);
+    const roleOptions = assignableRoles(actorRole);
     const [passwordMemberId, setPasswordMemberId] = useState<string | null>(null);
     const [state, action, pending] = useActionState(
         createTeamMember,
@@ -127,10 +198,11 @@ export function StaffManager({ members }: { members: TeamMember[] }) {
                                     defaultValue="staff"
                                     className="h-10 w-full rounded-md border bg-background px-3 text-sm"
                                 >
-                                    <option value="admin">Admin</option>
-                                    <option value="manager">Manager</option>
-                                    <option value="supervisor">Supervisor</option>
-                                    <option value="staff">Staff</option>
+                                    {roleOptions.map((role) => (
+                                        <option key={role} value={role}>
+                                            {role.charAt(0).toUpperCase() + role.slice(1)}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
 
@@ -216,7 +288,8 @@ export function StaffManager({ members }: { members: TeamMember[] }) {
                                     </TableCell>
 
                                     <TableCell className="text-right">
-                                        {!(["superadmin", "owner"] as AppRole[]).includes(member.role) && (
+                                        {/* Sirf UX: asal rank check server action mein hai. */}
+                                        {member.id !== actorId && canManageRole(actorRole, member.role) && (
                                             <div className="flex justify-end gap-2">
                                                 <Button
                                                     type="button"
@@ -232,24 +305,9 @@ export function StaffManager({ members }: { members: TeamMember[] }) {
                                                     Password
                                                 </Button>
 
-                                                <form
-                                                    action={setMemberActive.bind(
-                                                        null,
-                                                        member.id,
-                                                        !member.is_active
-                                                    )}
-                                                >
-                                                    <Button type="submit" size="sm" variant="outline">
-                                                        {member.is_active ? "Deactivate" : "Activate"}
-                                                    </Button>
-                                                </form>
+                                                <MemberStatusForm member={member} />
 
-                                                <form action={deleteTeamMember.bind(null, member.id)}>
-                                                   <ConfirmSubmitButton message="Delete this item?">
-                                                        <Trash2 className="mr-1 h-3.5 w-3.5" />
-                                                        Delete
-                                                    </ConfirmSubmitButton>
-                                                </form>
+                                                <MemberDeleteForm member={member} />
                                             </div>
                                         )}
                                     </TableCell>
@@ -258,28 +316,7 @@ export function StaffManager({ members }: { members: TeamMember[] }) {
                                 {passwordMemberId === member.id && (
                                     <TableRow>
                                         <TableCell colSpan={5} className="bg-muted/40">
-                                            <form
-                                                action={updateMemberPassword}
-                                                className="flex flex-col gap-2 sm:flex-row sm:items-end"
-                                            >
-                                                <input type="hidden" name="memberId" value={member.id} />
-
-                                                <div className="space-y-1">
-                                                    <Label htmlFor={`password-${member.id}`}>
-                                                        New temporary password
-                                                    </Label>
-                                                    <Input
-                                                        id={`password-${member.id}`}
-                                                        name="password"
-                                                        type="password"
-                                                        placeholder="Example: Staff12345"
-                                                        required
-                                                        className="w-full sm:w-72"
-                                                    />
-                                                </div>
-
-                                                <Button type="submit">Update Password</Button>
-                                            </form>
+                                            <MemberPasswordForm member={member} />
                                         </TableCell>
                                     </TableRow>
                                 )}

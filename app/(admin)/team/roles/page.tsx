@@ -13,7 +13,7 @@ import {
 } from "@/components/team/member-permissions-manager";
 
 export default async function RolesPage() {
-  await requirePermission("roles.manage_overrides");
+  const actor = await requirePermission("roles.manage_overrides");
 
   const supabase = await createClient();
 
@@ -45,6 +45,8 @@ export default async function RolesPage() {
 
   return (
     <MemberPermissionsManager
+      actorId={actor.id}
+      actorRole={actor.role}
       members={(members ?? []) as PermissionMember[]}
       permissions={(permissions ?? []) as PermissionRow[]}
       rolePermissions={(rolePermissions ?? []) as RolePermissionRow[]}
