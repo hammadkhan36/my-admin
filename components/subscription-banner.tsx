@@ -91,12 +91,15 @@
 "use client";
 
 import { useSubscription } from "@/components/subscription-provider";
+import { useAuth } from "@/components/auth-provider";
 import { RenewSubscriptionForm } from "@/components/renew-subscription-form";
 import { AlertTriangle, Clock, CalendarClock } from "lucide-react";
 // import { format } from "date-fns"; // optional date formatting, ya simple toDateString
 
 export function SubscriptionBanner() {
   const { isExpired, timeToExpiry, timeToGraceEnd, expiryDate, graceEndDate } = useSubscription();
+  const { profile } = useAuth();
+  const canRenew = profile.role === "superadmin" || profile.role === "owner";
 
   // If not expiring soon (more than 7 days) and not expired, no banner
   if (!isExpired && (!timeToExpiry || timeToExpiry.days > 7)) {
@@ -133,7 +136,7 @@ export function SubscriptionBanner() {
               </div>
             </div>
             <div className="w-full md:w-72">
-              <RenewSubscriptionForm />
+              {canRenew ? <RenewSubscriptionForm /> : null}
             </div>
           </div>
         </div>
@@ -165,7 +168,7 @@ export function SubscriptionBanner() {
               </div>
             </div>
             <div className="w-full md:w-72">
-              <RenewSubscriptionForm />
+              {canRenew ? <RenewSubscriptionForm /> : null}
             </div>
           </div>
         </div>

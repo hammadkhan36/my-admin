@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase-server";
+import { getSubscriptionStatus } from "@/lib/subscription/server";
 
 export async function GET() {
   const profile = await getCurrentProfile();
@@ -14,6 +15,13 @@ export async function GET() {
           "Cache-Control": "no-store",
         },
       }
+    );
+  }
+
+  if (profile.role !== "superadmin" && (await getSubscriptionStatus()).state === "expired") {
+    return NextResponse.json(
+      { error: "Subscription expired" },
+      { status: 403, headers: { "Cache-Control": "no-store" } }
     );
   }
 

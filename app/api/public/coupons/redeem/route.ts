@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { isSubscriptionUsable } from "@/lib/subscription/server";
 import { logActivity } from "@/lib/activity-log";
 import { fail, readJsonObject, reply } from "@/lib/website/request";
 
@@ -23,6 +24,10 @@ export async function POST(request: NextRequest) {
 
   if (request.headers.get("x-api-key") !== expectedKey) {
     return fail("Unauthorized request.", 401);
+  }
+
+  if (!(await isSubscriptionUsable())) {
+    return fail("Service is unavailable.", 503);
   }
 
   const parsedBody = await readJsonObject(request);

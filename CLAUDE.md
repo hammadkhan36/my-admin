@@ -43,7 +43,11 @@ Mutations live in `actions.ts` next to each page (`"use server"`): `requirePermi
 ### Feature flags and subscription
 - Section layouts call `requireFeatureEnabled(key)` (`lib/features/server.ts`, reads `feature_settings`; superadmin bypasses). Keys in `lib/features-config.ts`.
 - `lib/release-features.ts` hides unfinished modules (`campaigns`, `referrals`, `products`, `followUps`) from client navigation/settings — don't present them as working.
-- Subscription expiry/grace period is client-side (`components/subscription-provider.tsx`, data from `subscriptions` table via `supabase-config-provider.tsx`).
+- Subscription expiry is enforced server-side. SQL `public.subscription_status()` decides `active | grace | expired` from the DB clock, the business timezone, `is_active`, `end_date` and `grace_period_days` (superadmin and `lifetime` are never blocked by date). `lib/subscription/server.ts` wraps it: `getSubscriptionStatus` (cached; an RPC error is logged and let through as `unknown`, a missing row is `expired`), `requireActiveSubscription`, `isSubscriptionUsable`.
+  - `requireProfile()` (so also `requirePermission`) redirects to `/subscription` once expired, unless called with `{ allowExpiredSubscription: true }`. `requireSuperAdmin()` always allows it, so `/super-admin/dashboard` can still change `end_date` / `is_active`.
+  - `/subscription` (outside `(admin)`) is the renewal page. Only `owner` and `superadmin` see the form; `renew_subscription` re-checks that role in SQL.
+  - Public API: only `forms/submit`, `coupons/validate`, `coupons/redeem` and `reviews` return 503 when expired. Leads, appointments, slots, analytics, content GETs and `email-dispatch` are intentionally not gated.
+  - The client `SubscriptionProvider` only displays the server state (banner/countdown). Upgrade for an existing DB: `Docs/database-upgrades/server_subscription_check.sql`.
 
 ### Website integration details
 - Lead/appointment submissions are idempotent (`submission_id` + SHA-256 request fingerprint) and rate-limited per phone/email via `consume_submission_quota` — `lib/website/submissions.ts`.

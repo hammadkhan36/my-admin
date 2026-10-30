@@ -192,3 +192,51 @@ test('redeem_coupon is atomic, honours limit/dates/active, is service-only and i
  assert.equal((await redeem('OPEN'))[0].new_used_count,3);
  }finally{await db.close();}
 });
+
+test('subscription_status: DB date, grace boundaries, business timezone, suspend and lifetime',async()=>{
+ const db=new PGlite({extensions:{pgcrypto}});
+ try{
+ await db.exec(authFixture);await db.exec(schema);await db.exec(defaults);
+ const st=async(at)=>scalar(db,`SELECT state FROM public.subscription_status('${at}'::timestamptz)`);
+ await db.exec("UPDATE public.subscriptions SET plan='monthly',start_date='2026-01-01',end_date='2026-01-10',grace_period_days=7,is_active=true");
+ await db.exec("UPDATE public.business_settings SET timezone='UTC'");
+ assert.equal(await st('2026-01-10T23:59:00Z'),'active');
+ assert.equal(await st('2026-01-11T00:00:00Z'),'grace');
+ assert.equal(await st('2026-01-17T23:59:00Z'),'grace');
+ assert.equal(await st('2026-01-18T00:00:00Z'),'expired');
+ // Same instant, different business day: 19:30Z is already 00:30 on the 18th in Karachi (UTC+5).
+ await db.exec("UPDATE public.business_settings SET timezone='Asia/Karachi'");
+ assert.equal(await st('2026-01-17T19:30:00Z'),'expired');
+ assert.equal(await st('2026-01-17T18:30:00Z'),'grace');
+ await db.exec("UPDATE public.business_settings SET timezone='UTC'");
+ const row=(await db.query("SELECT * FROM public.subscription_status('2026-01-12T00:00:00Z')")).rows[0];
+ assert.equal(String(row.end_date.toISOString?row.end_date.toISOString().slice(0,10):row.end_date).slice(0,10),'2026-01-10');
+ await db.exec("UPDATE public.subscriptions SET is_active=false");
+ assert.equal(await st('2026-01-05T00:00:00Z'),'expired');
+ await db.exec("UPDATE public.subscriptions SET is_active=true,plan='lifetime'");
+ assert.equal(await st('2040-01-01T00:00:00Z'),'active');
+ await db.exec("DELETE FROM public.subscriptions");
+ assert.equal(await st('2026-01-05T00:00:00Z'),'expired');
+ }finally{await db.close();}
+});
+
+test('renew_subscription is owner/superadmin only and the SEC-02 upgrade SQL is repeatable',async()=>{
+ const db=new PGlite({extensions:{pgcrypto}});
+ try{
+ await db.exec(authFixture);await db.exec(schema);await db.exec(defaults);
+ const upgrade=fs.readFileSync('Docs/database-upgrades/server_subscription_check.sql','utf8');
+ await db.exec(upgrade);await db.exec(upgrade);
+ const staff='22222222-2222-4222-8222-222222222222',boss='33333333-3333-4333-8333-333333333333';
+ await db.exec(`INSERT INTO auth.users(id,email) VALUES ('${owner}','sa@example.test'),('${staff}','staff@example.test'),('${boss}','boss@example.test');
+  UPDATE public.profiles SET role='superadmin',is_active=true WHERE id='${owner}';
+  UPDATE public.profiles SET role='admin',is_active=true WHERE id='${staff}';
+  UPDATE public.profiles SET role='owner',is_active=true WHERE id='${boss}';
+  UPDATE public.subscriptions SET end_date='2020-01-01';`);
+ const as=async(user,sql)=>{await db.exec(`SET request.jwt.claim.sub='${user}'; SET ROLE authenticated;`);try{return await scalar(db,sql);}finally{await db.exec('RESET ROLE;');}};
+ await as(owner,"SELECT public.set_renewal_code('test-renewal-code')");
+ assert.equal(await as(staff,"SELECT public.renew_subscription('test-renewal-code')"),false);
+ assert.equal(await scalar(db,"SELECT state FROM public.subscription_status()"),'expired');
+ assert.equal(await as(boss,"SELECT public.renew_subscription('test-renewal-code')"),true);
+ assert.equal(await scalar(db,"SELECT state FROM public.subscription_status()"),'active');
+ }finally{await db.close();}
+});

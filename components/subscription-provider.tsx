@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { createClient } from "@/lib/supabase-browser";
-import { useSupabaseConfig } from "@/components/supabase-config-provider";
+import type { SubscriptionStatus } from "@/lib/subscription/types";
 
 type TimeLeft = { days: number; hours: number; minutes: number; seconds: number };
 
@@ -13,15 +12,19 @@ type SubscriptionContextType = {
   timeToGraceEnd: TimeLeft | null;
   expiryDate: Date | null;
   graceEndDate: Date | null;
-  renewWithCode: (code: string) => Promise<RenewResult>;
 };
-
-export type RenewResult = "renewed" | "invalid" | "locked";
 
 const SubscriptionContext = React.createContext<SubscriptionContextType | null>(null);
 
-export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
-  const { subscription, refreshData } = useSupabaseConfig();
+// The server decides expired / grace (DB clock + business timezone). The browser clock is
+// only used for the countdown text in the banner.
+export function SubscriptionProvider({
+  status,
+  children,
+}: {
+  status: SubscriptionStatus;
+  children: React.ReactNode;
+}) {
   const [now, setNow] = React.useState(new Date());
 
   React.useEffect(() => {
@@ -29,16 +32,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return () => clearInterval(interval);
   }, []);
 
-  if (!subscription) {
-    return <SubscriptionContext.Provider value={{ isExpired: false, isGracePeriodOver: false, timeToExpiry: null, timeToGraceEnd: null, expiryDate: null, graceEndDate: null, renewWithCode: async () => "invalid" }}>{children}</SubscriptionContext.Provider>;
-  }
+  const isLifetime = status.plan === "lifetime";
+  const hasDates = !isLifetime && status.endDate !== null;
+  const isExpired = status.state === "grace" || status.state === "expired";
+  const isGracePeriodOver = status.state === "expired";
 
-  const isLifetime = subscription.plan === "lifetime";
-  const expiryDate = new Date(subscription.end_date || "2099-12-31");
-  const isExpired = !isLifetime && now > expiryDate;
-  const graceEndDate = new Date(expiryDate);
-  graceEndDate.setDate(graceEndDate.getDate() + subscription.grace_period_days);
-  const isGracePeriodOver = !isLifetime && now > graceEndDate;
+  // end_date is the last paid day, so the countdown runs to the end of that day.
+  const expiryDate = hasDates ? new Date(`${status.endDate}T23:59:59`) : null;
+  const graceEndDate = hasDates && status.graceEndDate ? new Date(`${status.graceEndDate}T23:59:59`) : null;
 
   function calculateTimeLeft(target: Date): TimeLeft {
     const diff = target.getTime() - now.getTime();
@@ -51,21 +52,13 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     };
   }
 
-  const timeToExpiry = !isExpired ? calculateTimeLeft(expiryDate) : null;
-  const timeToGraceEnd = isExpired ? calculateTimeLeft(graceEndDate) : null;
-
-  const renewWithCode = async (code: string): Promise<RenewResult> => {
-    const value = code.trim();
-    if (value.length < 8 || new TextEncoder().encode(value).length > 72) return "invalid";
-    const { data, error } = await createClient().rpc("renew_subscription", { code: value });
-    if (error?.message?.includes("renewal_locked")) return "locked";
-    if (error || data !== true) return "invalid";
-    await refreshData();
-    return "renewed";
-  };
+  const timeToExpiry = !isExpired && expiryDate ? calculateTimeLeft(expiryDate) : null;
+  const timeToGraceEnd = isExpired && graceEndDate ? calculateTimeLeft(graceEndDate) : null;
 
   return (
-    <SubscriptionContext.Provider value={{ isExpired, isGracePeriodOver, timeToExpiry, timeToGraceEnd, expiryDate, graceEndDate, renewWithCode }}>
+    <SubscriptionContext.Provider
+      value={{ isExpired, isGracePeriodOver, timeToExpiry, timeToGraceEnd, expiryDate, graceEndDate }}
+    >
       {children}
     </SubscriptionContext.Provider>
   );

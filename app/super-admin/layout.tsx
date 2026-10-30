@@ -9,6 +9,7 @@ import {
   getCurrentPermissions,
   requireSuperAdmin,
 } from "@/lib/auth/server";
+import { getSubscriptionStatus } from "@/lib/subscription/server";
 
 export default async function SuperAdminLayout({
   children,
@@ -17,10 +18,11 @@ export default async function SuperAdminLayout({
 }) {
   const profile = await requireSuperAdmin();
   const permissions = await getCurrentPermissions(profile);
+  const subscriptionStatus = await getSubscriptionStatus();
 
   return (
     <AuthProvider profile={profile} permissions={permissions}>
-      <ConfigProviders>{children}</ConfigProviders>
+      <ConfigProviders subscriptionStatus={subscriptionStatus}>{children}</ConfigProviders>
     </AuthProvider>
   );
 }

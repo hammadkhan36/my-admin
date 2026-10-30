@@ -60,6 +60,10 @@ where email = 'OWNER_EMAIL';
 
 ## Renewal-code security
 
+## Subscription expiry
+
+Expiry is checked on the server from the database date (business timezone), not the browser clock. `requireProfile` / `requirePermission` redirect to `/subscription` after the grace period; `superadmin` is never blocked, and `owner` / `superadmin` are the only roles that can renew. See `lib/subscription/server.ts` and `public.subscription_status()`.
+
 Plain renewal codes are not stored or returned to the browser. `set_renewal_code` stores a bcrypt hash and `renew_subscription` validates an entered code inside PostgreSQL. This replaces the earlier client-side comparison that exposed the code to authenticated users.
 
 ## Next implementation

@@ -4,6 +4,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 import { AuthProfile, isAppRole } from "@/lib/auth/roles";
+import { requireActiveSubscription } from "@/lib/subscription/server";
 
 export const getCurrentProfile = cache(async (): Promise<AuthProfile | null> => {
   const supabase = await createClient();
@@ -29,18 +30,24 @@ export const getCurrentProfile = cache(async (): Promise<AuthProfile | null> => 
   return data as AuthProfile;
 });
 
-export async function requireProfile(): Promise<AuthProfile> {
+export async function requireProfile(
+  options: { allowExpiredSubscription?: boolean } = {}
+): Promise<AuthProfile> {
   const profile = await getCurrentProfile();
 
   if (!profile || !profile.is_active) {
     redirect("/?error=access_denied");
   }
 
+  if (!options.allowExpiredSubscription) {
+    await requireActiveSubscription(profile);
+  }
+
   return profile;
 }
 
 export async function requireSuperAdmin(): Promise<AuthProfile> {
-  const profile = await requireProfile();
+  const profile = await requireProfile({ allowExpiredSubscription: true });
 
   if (profile.role !== "superadmin") {
     redirect("/dashboard");

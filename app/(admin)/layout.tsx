@@ -9,6 +9,7 @@ import {
   getCurrentPermissions,
   requireProfile,
 } from "@/lib/auth/server";
+import { getSubscriptionStatus } from "@/lib/subscription/server";
 
 export default async function DashboardLayout({
   children,
@@ -17,10 +18,11 @@ export default async function DashboardLayout({
 }) {
   const profile = await requireProfile();
   const permissions = await getCurrentPermissions(profile);
+  const subscriptionStatus = await getSubscriptionStatus();
 
   return (
     <AuthProvider profile={profile} permissions={permissions}>
-      <ConfigProviders>
+      <ConfigProviders subscriptionStatus={subscriptionStatus}>
         <DashboardShell>{children}</DashboardShell>
       </ConfigProviders>
     </AuthProvider>

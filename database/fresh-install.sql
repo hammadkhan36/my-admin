@@ -657,8 +657,9 @@ DECLARE
   sec app_private.subscription_secrets%rowtype;
   next_end_date date;
   base_date date;
+  today date;
 BEGIN
-  IF auth.uid() IS NULL OR public.current_user_role() IS NULL THEN RETURN false; END IF;
+  IF auth.uid() IS NULL OR public.current_user_role() IS NULL OR public.current_user_role() NOT IN ('superadmin'::public.app_role,'owner'::public.app_role) THEN RETURN false; END IF;
   IF code IS NULL OR length(btrim(code)) < 8 OR octet_length(btrim(code)) > 72 THEN RETURN false; END IF;
   IF (SELECT count(*) FROM public.subscriptions) <> 1 THEN RETURN false; END IF;
   SELECT * INTO s FROM public.subscriptions LIMIT 1 FOR UPDATE;
@@ -683,7 +684,8 @@ BEGIN
       VALUES(auth.uid(),'subscription.renew_failed','subscription',s.id::text);
     RETURN false;
   END IF;
-  base_date := greatest(current_date, coalesce(s.end_date, current_date));
+  today := (now() AT TIME ZONE coalesce((SELECT timezone FROM public.business_settings LIMIT 1),'UTC'))::date;
+  base_date := greatest(today, coalesce(s.end_date, today));
   CASE s.plan
     WHEN 'monthly' THEN next_end_date := (base_date + interval '1 month')::date;
     WHEN 'half-yearly' THEN next_end_date := (base_date + interval '6 months')::date;
@@ -692,7 +694,7 @@ BEGIN
     WHEN 'lifetime' THEN next_end_date := date '2099-12-31';
     ELSE RETURN false;
   END CASE;
-  UPDATE public.subscriptions SET start_date=current_date,end_date=next_end_date,
+  UPDATE public.subscriptions SET start_date=today,end_date=next_end_date,
     is_active=true WHERE id=s.id;
   UPDATE app_private.subscription_secrets
     SET renewal_code_hash=NULL, failed_attempts=0, locked_until=NULL, updated_at=now()
@@ -719,6 +721,39 @@ BEGIN
   FROM public.subscriptions s
   LEFT JOIN app_private.subscription_secrets sec ON sec.subscription_id = s.id
   LIMIT 1;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.subscription_status(at timestamptz DEFAULT now())
+ RETURNS TABLE(state text, plan text, end_date date, grace_end_date date)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+#variable_conflict use_column
+DECLARE
+  s public.subscriptions%rowtype;
+  today date;
+  grace_end date;
+BEGIN
+  SELECT * INTO s FROM public.subscriptions ORDER BY created_at LIMIT 1;
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT 'expired'::text, NULL::text, NULL::date, NULL::date;
+    RETURN;
+  END IF;
+  IF NOT s.is_active THEN
+    RETURN QUERY SELECT 'expired'::text, s.plan, s.end_date, NULL::date;
+    RETURN;
+  END IF;
+  IF s.plan = 'lifetime' OR s.end_date IS NULL THEN
+    RETURN QUERY SELECT 'active'::text, s.plan, s.end_date, NULL::date;
+    RETURN;
+  END IF;
+  today := (at AT TIME ZONE coalesce((SELECT timezone FROM public.business_settings LIMIT 1),'UTC'))::date;
+  grace_end := s.end_date + s.grace_period_days;
+  RETURN QUERY SELECT
+    CASE WHEN today <= s.end_date THEN 'active' WHEN today <= grace_end THEN 'grace' ELSE 'expired' END,
+    s.plan, s.end_date, grace_end;
 END;
 $function$;
 
@@ -1714,6 +1749,12 @@ REVOKE ALL ON FUNCTION public.get_renewal_code_status() FROM PUBLIC, anon, authe
 GRANT EXECUTE ON FUNCTION public.get_renewal_code_status() TO authenticated;
 
 GRANT EXECUTE ON FUNCTION public.get_renewal_code_status() TO service_role;
+
+REVOKE ALL ON FUNCTION public.subscription_status(timestamptz) FROM PUBLIC, anon, authenticated, service_role;
+
+GRANT EXECUTE ON FUNCTION public.subscription_status(timestamptz) TO authenticated;
+
+GRANT EXECUTE ON FUNCTION public.subscription_status(timestamptz) TO service_role;
 
 REVOKE ALL ON FUNCTION "app_private"."queue_admin_email"() FROM PUBLIC, anon, authenticated, service_role;
 

@@ -1,47 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useSubscription } from "@/components/subscription-provider";
-import { toast } from "sonner";
+import { FormActionAlert } from "@/components/form-action-alert";
+import { renewSubscription } from "@/app/subscription/actions";
+import { initialActionState } from "@/lib/action-state";
 
-export function RenewSubscriptionForm() {
-  const { renewWithCode } = useSubscription();
-  const [code, setCode] = useState("");
+export function RenewSubscriptionForm({ redirectOnSuccess }: { redirectOnSuccess?: string }) {
+  const router = useRouter();
+  const [state, formAction, pending] = useActionState(renewSubscription, initialActionState);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!code.trim()) {
-      toast.error("Please enter renewal code");
-      return;
+  useEffect(() => {
+    if (state.ok && redirectOnSuccess) {
+      router.replace(redirectOnSuccess);
     }
-    const result = await renewWithCode(code.trim());
-    if (result === "renewed") {
-      toast.success("Subscription renewed successfully!");
-      setCode("");
-    } else if (result === "locked") {
-      toast.error("Too many attempts. Please try again in 15 minutes.");
-    } else {
-      toast.error("Invalid renewal code");
-    }
-  };
+  }, [state, redirectOnSuccess, router]);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form action={formAction} className="space-y-3">
       <div className="space-y-1">
         <Label htmlFor="renewal-code">Renewal Code</Label>
         <Input
           id="renewal-code"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
+          name="code"
+          required
+          autoComplete="off"
           placeholder="Enter code provided by support"
           className="h-9"
         />
       </div>
-      <Button type="submit" className="w-full h-9">
-        Renew Subscription
+      <FormActionAlert state={state} />
+      <Button type="submit" className="w-full h-9" disabled={pending}>
+        {pending ? "Renewing..." : "Renew Subscription"}
       </Button>
     </form>
   );
