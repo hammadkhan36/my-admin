@@ -21,7 +21,7 @@ test('fresh schema, repeatable defaults, RLS, booking conflicts and notification
  assert.equal(await scalar(db,'SELECT count(*)::int FROM public.subscriptions'),1);
  assert.equal(await scalar(db,'SELECT count(*)::int FROM public.business_hours'),7);
  assert.equal(await scalar(db,"SELECT count(*)::int FROM pg_class WHERE relnamespace='public'::regnamespace AND relkind='r' AND NOT relrowsecurity"),0);
- await db.exec(`INSERT INTO auth.users(id,email) VALUES ('${owner}','owner@example.test'); UPDATE public.profiles SET role='owner' WHERE id='${owner}'; SET request.jwt.claim.sub='${owner}'; SET ROLE authenticated;`);
+ await db.exec(`INSERT INTO auth.users(id,email) VALUES ('${owner}','owner@example.test'); UPDATE public.profiles SET role='owner',is_active=true WHERE id='${owner}'; SET request.jwt.claim.sub='${owner}'; SET ROLE authenticated;`);
  assert.equal(await scalar(db,"SELECT public.has_permission('customers.create')"),true);
  await assert.rejects(db.exec('TRUNCATE public.customers'),/permission denied/);
  await assert.rejects(db.exec('SELECT * FROM public.email_outbox'),/permission denied/);
@@ -63,13 +63,44 @@ test('second business starts empty and first-admin bootstrap cannot overwrite an
  await assert.rejects(db.exec(bootstrap),/Replace target_email/);
  await db.exec(`INSERT INTO auth.users(id,email) VALUES ('${owner}','owner@example.test');`);
  assert.equal(await scalar(db,`SELECT role FROM public.profiles WHERE id='${owner}'`),'staff');
+ assert.equal(await scalar(db,`SELECT is_active FROM public.profiles WHERE id='${owner}'`),false);
  const configured=bootstrap.replace("target_email text := 'CHANGE_ME@example.com'","target_email text := 'owner@example.test'");
  await db.exec(configured);
  assert.equal(await scalar(db,`SELECT role FROM public.profiles WHERE id='${owner}'`),'superadmin');
+ assert.equal(await scalar(db,`SELECT is_active FROM public.profiles WHERE id='${owner}'`),true);
  await assert.rejects(db.exec(configured),/superadmin already exists/);
  await db.exec(`SET request.jwt.claim.sub='${owner}'; SET ROLE authenticated; SELECT public.set_renewal_code('test-renewal-code');`);
+ const subCols=(await db.query('SELECT * FROM public.subscriptions')).rows[0];
+ assert.ok(!('renewal_code_hash' in subCols));
+ await assert.rejects(db.exec('SELECT * FROM app_private.subscription_secrets'),/permission denied/);
  assert.equal(await scalar(db,"SELECT public.renew_subscription('wrong-renewal-code')"),false);
  assert.equal(await scalar(db,"SELECT public.renew_subscription('test-renewal-code')"),true);
  assert.equal(await scalar(db,"SELECT public.renew_subscription('test-renewal-code')"),false);
+ // Lockout: 5 wrong attempts lock renewal, even the right code is then refused until a new code is set.
+ await db.exec("SELECT public.set_renewal_code('test-renewal-code');");
+ for(let i=0;i<5;i++)assert.equal(await scalar(db,"SELECT public.renew_subscription('wrong-renewal-code')"),false);
+ await assert.rejects(db.exec("SELECT public.renew_subscription('test-renewal-code')"),/renewal_locked/);
+ const status=(await db.query('SELECT * FROM public.get_renewal_code_status()')).rows[0];
+ assert.equal(status.has_code,true);assert.ok(status.locked_until);
+ await db.exec("SELECT public.set_renewal_code('test-renewal-code');");
+ assert.equal((await db.query('SELECT * FROM public.get_renewal_code_status()')).rows[0].locked_until,null);
+ assert.equal(await scalar(db,"SELECT public.renew_subscription('test-renewal-code')"),true);
+ await db.exec(`RESET ROLE; INSERT INTO auth.users(id,email) VALUES ('22222222-2222-4222-8222-222222222222','staff@example.test'); SET request.jwt.claim.sub='22222222-2222-4222-8222-222222222222'; SET ROLE authenticated;`);
+ await assert.rejects(db.exec('SELECT * FROM public.get_renewal_code_status()'),/Forbidden/);
+ await db.exec('RESET ROLE;');
+ }finally{await db.close();}
+});
+test('upgrade SQL moves the renewal hash, is repeatable and keeps the old code working',async()=>{
+ const db=new PGlite({extensions:{pgcrypto}});
+ try{
+ await db.exec(authFixture);await db.exec(schema);await db.exec(defaults);
+ const upgrade=fs.readFileSync('Docs/database-upgrades/protect_signup_and_renewal_code.sql','utf8');
+ // Recreate the pre-upgrade shape: hash stored on the public table.
+ await db.exec("DROP TABLE app_private.subscription_secrets; ALTER TABLE public.subscriptions ADD COLUMN renewal_code_hash text; UPDATE public.subscriptions SET renewal_code_hash=extensions.crypt('old-renewal-code',extensions.gen_salt('bf',4));");
+ await db.exec(upgrade);await db.exec(upgrade);
+ assert.equal(await scalar(db,"SELECT count(*)::int FROM information_schema.columns WHERE table_schema='public' AND table_name='subscriptions' AND column_name='renewal_code_hash'"),0);
+ assert.equal(await scalar(db,'SELECT count(*)::int FROM app_private.subscription_secrets WHERE renewal_code_hash IS NOT NULL'),1);
+ await db.exec(`INSERT INTO auth.users(id,email) VALUES ('${owner}','owner@example.test'); UPDATE public.profiles SET role='superadmin',is_active=true WHERE id='${owner}'; SET request.jwt.claim.sub='${owner}'; SET ROLE authenticated;`);
+ assert.equal(await scalar(db,"SELECT public.renew_subscription('old-renewal-code')"),true);
  }finally{await db.close();}
 });

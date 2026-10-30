@@ -21,7 +21,7 @@ Har business ka alag Supabase project aur alag admin/website deployment banayein
 
 ## Kya copy nahi hota
 
-Passwords, Auth users, API keys, clinic data, customer details, appointments, emails, uploaded files, DNS, hosting settings ya Resend account copy nahi hote. Current app schema mein koi Storage bucket configured nahi; media entries URL references hain. Supabase Auth site URL/redirect URLs aur signup policy apne deployment ke liye configure karein.
+Passwords, Auth users, API keys, clinic data, customer details, appointments, emails, uploaded files, DNS, hosting settings ya Resend account copy nahi hote. Current app schema mein koi Storage bucket configured nahi; media entries URL references hain. Supabase Auth site URL/redirect URLs aur signup policy apne deployment ke liye configure karein. **Supabase Auth mein public signup OFF karna lazmi hai.** Naye Auth signups ab trigger se inactive staff profile banate hain, lekin signup band rakhna phir bhi pehli hifazat hai. Dashboard (Team > Staff) se bane members khud active hote hain.
 
 ## Tests
 

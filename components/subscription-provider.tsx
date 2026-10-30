@@ -13,8 +13,10 @@ type SubscriptionContextType = {
   timeToGraceEnd: TimeLeft | null;
   expiryDate: Date | null;
   graceEndDate: Date | null;
-  renewWithCode: (code: string) => Promise<boolean>;
+  renewWithCode: (code: string) => Promise<RenewResult>;
 };
+
+export type RenewResult = "renewed" | "invalid" | "locked";
 
 const SubscriptionContext = React.createContext<SubscriptionContextType | null>(null);
 
@@ -28,7 +30,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   }, []);
 
   if (!subscription) {
-    return <SubscriptionContext.Provider value={{ isExpired: false, isGracePeriodOver: false, timeToExpiry: null, timeToGraceEnd: null, expiryDate: null, graceEndDate: null, renewWithCode: async () => false }}>{children}</SubscriptionContext.Provider>;
+    return <SubscriptionContext.Provider value={{ isExpired: false, isGracePeriodOver: false, timeToExpiry: null, timeToGraceEnd: null, expiryDate: null, graceEndDate: null, renewWithCode: async () => "invalid" }}>{children}</SubscriptionContext.Provider>;
   }
 
   const isLifetime = subscription.plan === "lifetime";
@@ -52,13 +54,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const timeToExpiry = !isExpired ? calculateTimeLeft(expiryDate) : null;
   const timeToGraceEnd = isExpired ? calculateTimeLeft(graceEndDate) : null;
 
-  const renewWithCode = async (code: string) => {
+  const renewWithCode = async (code: string): Promise<RenewResult> => {
     const value = code.trim();
-    if (value.length < 8 || new TextEncoder().encode(value).length > 72) return false;
+    if (value.length < 8 || new TextEncoder().encode(value).length > 72) return "invalid";
     const { data, error } = await createClient().rpc("renew_subscription", { code: value });
-    if (error || data !== true) return false;
+    if (error?.message?.includes("renewal_locked")) return "locked";
+    if (error || data !== true) return "invalid";
     await refreshData();
-    return true;
+    return "renewed";
   };
 
   return (

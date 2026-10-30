@@ -106,7 +106,6 @@ CREATE TABLE "public"."subscriptions" (
   "end_date" date,
   "grace_period_days" integer DEFAULT 7 NOT NULL,
   "is_active" boolean DEFAULT true NOT NULL,
-  "renewal_code_hash" text,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   "updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -538,12 +537,14 @@ CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
  SET search_path TO ''
 AS $function$
 begin
-  insert into public.profiles (id, email, full_name, role)
+  -- New Auth signups stay inactive until an admin activates them (createTeamMember / bootstrap-admin.sql do this).
+  insert into public.profiles (id, email, full_name, role, is_active)
   values (
     new.id,
     coalesce(new.email, ''),
     nullif(new.raw_user_meta_data ->> 'full_name', ''),
-    'staff'
+    'staff',
+    false
   )
   on conflict (id) do nothing;
   return new;
@@ -621,8 +622,11 @@ BEGIN
   IF (SELECT count(*) FROM public.subscriptions) <> 1 THEN
     RAISE EXCEPTION 'Expected one subscription for this business' USING ERRCODE='22023';
   END IF;
-  UPDATE public.subscriptions
-  SET renewal_code_hash = extensions.crypt(btrim(new_code), extensions.gen_salt('bf', 10));
+  INSERT INTO app_private.subscription_secrets(subscription_id, renewal_code_hash, failed_attempts, locked_until, updated_at)
+  SELECT id, extensions.crypt(btrim(new_code), extensions.gen_salt('bf', 10)), 0, NULL, now()
+  FROM public.subscriptions
+  ON CONFLICT (subscription_id) DO UPDATE
+  SET renewal_code_hash = EXCLUDED.renewal_code_hash, failed_attempts = 0, locked_until = NULL, updated_at = now();
 END;
 $function$;
 
@@ -634,6 +638,7 @@ CREATE OR REPLACE FUNCTION public.renew_subscription(code text)
 AS $function$
 DECLARE
   s public.subscriptions%rowtype;
+  sec app_private.subscription_secrets%rowtype;
   next_end_date date;
   base_date date;
 BEGIN
@@ -641,8 +646,27 @@ BEGIN
   IF code IS NULL OR length(btrim(code)) < 8 OR octet_length(btrim(code)) > 72 THEN RETURN false; END IF;
   IF (SELECT count(*) FROM public.subscriptions) <> 1 THEN RETURN false; END IF;
   SELECT * INTO s FROM public.subscriptions LIMIT 1 FOR UPDATE;
-  IF s.id IS NULL OR s.renewal_code_hash IS NULL THEN RETURN false; END IF;
-  IF extensions.crypt(btrim(code), s.renewal_code_hash) IS DISTINCT FROM s.renewal_code_hash THEN RETURN false; END IF;
+  IF s.id IS NULL THEN RETURN false; END IF;
+  SELECT * INTO sec FROM app_private.subscription_secrets WHERE subscription_id = s.id FOR UPDATE;
+  IF NOT FOUND OR sec.renewal_code_hash IS NULL THEN RETURN false; END IF;
+  -- Locked: raise without touching counters so nothing needs to be committed.
+  IF sec.locked_until IS NOT NULL AND sec.locked_until > now() THEN
+    RAISE EXCEPTION 'renewal_locked' USING ERRCODE='P0001';
+  END IF;
+  IF extensions.crypt(btrim(code), sec.renewal_code_hash) IS DISTINCT FROM sec.renewal_code_hash THEN
+    IF sec.failed_attempts + 1 >= 5 THEN
+      UPDATE app_private.subscription_secrets
+      SET failed_attempts = 0, locked_until = now() + interval '15 minutes', updated_at = now()
+      WHERE subscription_id = s.id;
+    ELSE
+      UPDATE app_private.subscription_secrets
+      SET failed_attempts = failed_attempts + 1, locked_until = NULL, updated_at = now()
+      WHERE subscription_id = s.id;
+    END IF;
+    INSERT INTO public.audit_logs(actor_id,event_type,target_type,target_id)
+      VALUES(auth.uid(),'subscription.renew_failed','subscription',s.id::text);
+    RETURN false;
+  END IF;
   base_date := greatest(current_date, coalesce(s.end_date, current_date));
   CASE s.plan
     WHEN 'monthly' THEN next_end_date := (base_date + interval '1 month')::date;
@@ -653,10 +677,32 @@ BEGIN
     ELSE RETURN false;
   END CASE;
   UPDATE public.subscriptions SET start_date=current_date,end_date=next_end_date,
-    is_active=true,renewal_code_hash=NULL WHERE id=s.id;
+    is_active=true WHERE id=s.id;
+  UPDATE app_private.subscription_secrets
+    SET renewal_code_hash=NULL, failed_attempts=0, locked_until=NULL, updated_at=now()
+    WHERE subscription_id=s.id;
   INSERT INTO public.audit_logs(actor_id,event_type,target_type,target_id)
     VALUES(auth.uid(),'subscription.renewed','subscription',s.id::text);
   RETURN true;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_renewal_code_status()
+ RETURNS TABLE(has_code boolean, failed_attempts integer, locked_until timestamp with time zone)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+#variable_conflict use_column
+BEGIN
+  IF auth.uid() IS NULL OR public.current_user_role() IS DISTINCT FROM 'superadmin'::public.app_role THEN
+    RAISE EXCEPTION 'Forbidden' USING ERRCODE='42501';
+  END IF;
+  RETURN QUERY
+  SELECT coalesce(sec.renewal_code_hash IS NOT NULL, false), coalesce(sec.failed_attempts, 0), sec.locked_until
+  FROM public.subscriptions s
+  LEFT JOIN app_private.subscription_secrets sec ON sec.subscription_id = s.id
+  LIMIT 1;
 END;
 $function$;
 
@@ -824,6 +870,18 @@ ALTER TABLE "public"."subscriptions" ADD CONSTRAINT "subscriptions_grace_period_
 ALTER TABLE "public"."subscriptions" ADD CONSTRAINT "subscriptions_pkey" PRIMARY KEY (id);
 
 ALTER TABLE "public"."subscriptions" ADD CONSTRAINT "subscriptions_plan_check" CHECK ((plan = ANY (ARRAY['one-time'::text, 'monthly'::text, 'half-yearly'::text, 'yearly'::text, 'lifetime'::text])));
+
+CREATE TABLE IF NOT EXISTS app_private.subscription_secrets (
+  subscription_id uuid PRIMARY KEY REFERENCES public.subscriptions(id) ON DELETE CASCADE,
+  renewal_code_hash text,
+  failed_attempts integer NOT NULL DEFAULT 0,
+  locked_until timestamp with time zone,
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
+ALTER TABLE app_private.subscription_secrets ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON app_private.subscription_secrets FROM PUBLIC, anon, authenticated, service_role;
 
 ALTER TABLE "public"."lead_notes" ADD CONSTRAINT "lead_notes_pkey" PRIMARY KEY (id);
 
@@ -1630,6 +1688,12 @@ REVOKE ALL ON FUNCTION "public"."renew_subscription"(code text) FROM PUBLIC, ano
 GRANT EXECUTE ON FUNCTION "public"."renew_subscription"(code text) TO "authenticated";
 
 GRANT EXECUTE ON FUNCTION "public"."renew_subscription"(code text) TO "service_role";
+
+REVOKE ALL ON FUNCTION public.get_renewal_code_status() FROM PUBLIC, anon, authenticated, service_role;
+
+GRANT EXECUTE ON FUNCTION public.get_renewal_code_status() TO authenticated;
+
+GRANT EXECUTE ON FUNCTION public.get_renewal_code_status() TO service_role;
 
 REVOKE ALL ON FUNCTION "app_private"."queue_admin_email"() FROM PUBLIC, anon, authenticated, service_role;
 

@@ -17,10 +17,12 @@ export function RenewSubscriptionForm() {
       toast.error("Please enter renewal code");
       return;
     }
-    const success = await renewWithCode(code.trim());
-    if (success) {
+    const result = await renewWithCode(code.trim());
+    if (result === "renewed") {
       toast.success("Subscription renewed successfully!");
       setCode("");
+    } else if (result === "locked") {
+      toast.error("Too many attempts. Please try again in 15 minutes.");
     } else {
       toast.error("Invalid renewal code");
     }

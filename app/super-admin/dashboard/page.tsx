@@ -39,20 +39,30 @@ type Subscription = {
   is_active: boolean;
 };
 
+type RenewalCodeStatus = {
+  has_code: boolean;
+  failed_attempts: number;
+  locked_until: string | null;
+};
+
 export default async function SuperAdminDashboard() {
   await requireSuperAdmin();
 
   const supabase = await createClient();
 
-  const [{ data: business }, { data: subscription }, { data: features }] =
+  const [{ data: business }, { data: subscription }, { data: features }, { data: codeStatusRows }] =
     await Promise.all([
       supabase.from("business_settings").select("*").limit(1).single(),
       supabase.from("subscriptions").select("*").limit(1).single(),
       supabase.from("feature_settings").select("*").order("feature_key"),
+      supabase.rpc("get_renewal_code_status"),
     ]);
 
   const businessSettings = business as BusinessSettings | null;
   const sub = subscription as Subscription | null;
+  const codeStatus = ((codeStatusRows ?? []) as RenewalCodeStatus[])[0] ?? null;
+  const codeLockedUntil = codeStatus?.locked_until ? new Date(codeStatus.locked_until) : null;
+  const codeIsLocked = !!codeLockedUntil && codeLockedUntil > new Date();
   const featureSettings = (features ?? []) as FeatureSetting[];
 
   const isLifetime = sub?.plan === "lifetime";
@@ -240,6 +250,21 @@ export default async function SuperAdminDashboard() {
                     <Separator />
 
                     <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                        <span>Renewal code: {codeStatus?.has_code ? "Set" : "Not set"}</span>
+                        <span>·</span>
+                        <span>Failed attempts: {codeStatus?.failed_attempts ?? 0}/5</span>
+                        {codeIsLocked && codeLockedUntil && (
+                          <Badge variant="destructive">
+                            Locked until {codeLockedUntil.toLocaleString()}
+                          </Badge>
+                        )}
+                      </div>
+                      {codeIsLocked && (
+                        <p className="text-xs text-muted-foreground">
+                          Too many wrong attempts. Setting a new renewal code unlocks it immediately.
+                        </p>
+                      )}
                       <Label htmlFor="renewal_code">New renewal code (leave blank to keep existing)</Label>
                       <Input id="renewal_code" name="renewal_code" type="password" autoComplete="new-password" minLength={8} maxLength={72} />
                     </div>
