@@ -273,3 +273,40 @@ test('phone numbers normalize to E.164 in SQL like lib/phone-utils.ts',async()=>
  assert.equal(await scalar(db,`SELECT phone FROM public.customers WHERE id='${uk}'`),'+447911123456');
  }finally{await db.close();}
 });
+
+test('phone_normalize_backfill.sql normalizes customers/leads/appointments, stops on conflict and is repeatable',async()=>{
+ const db=new PGlite({extensions:{pgcrypto}});
+ const backfill=fs.readFileSync('Docs/database-upgrades/phone_normalize_backfill.sql','utf8');
+ const phones=async t=>(await db.query(`SELECT ${t==='customers'?'phone':t==='leads'?'phone':'customer_phone'} AS p FROM public.${t} ORDER BY created_at,id`)).rows.map(r=>r.p);
+ try{
+ await db.exec(authFixture);await db.exec(schema);await db.exec(defaults);
+ // Phone-mode business with rows stored before normalization existed.
+ await db.exec("UPDATE public.communication_settings SET contact_mode='phone'");
+ await db.exec("ALTER TABLE public.customers DISABLE TRIGGER USER; INSERT INTO public.customers(name,phone) VALUES ('Old A','03001234567'),('Old B','(0301) 2345678'),('Already','+923021111111'); ALTER TABLE public.customers ENABLE TRIGGER USER;");
+ await db.exec("INSERT INTO public.leads(name,phone) VALUES ('Lead ok','0333 1112222'),('Lead bad','call me');");
+ await db.exec("INSERT INTO public.appointments(customer_name,customer_phone,appointment_date,appointment_time) VALUES ('Appt','03441112222','2098-01-01','10:00');");
+ // Function missing in an older upgrade path: the file must create it.
+ await db.exec('DROP FUNCTION public.normalize_phone(text,text)');
+ await db.exec(backfill);
+ assert.deepEqual((await db.query('SELECT phone FROM public.customers ORDER BY name')).rows.map(r=>r.phone),['+923021111111','+923001234567','+923012345678']);
+ assert.deepEqual(await phones('leads'),['+923331112222','call me']);
+ assert.deepEqual(await phones('appointments'),['+923441112222']);
+ const stamp=await scalar(db,'SELECT max(updated_at)::text FROM public.customers');
+ await db.exec(backfill);
+ assert.equal(await scalar(db,'SELECT max(updated_at)::text FROM public.customers'),stamp);
+ assert.deepEqual(await phones('leads'),['+923331112222','call me']);
+ // Conflict: two customers become the same number -> abort, nothing changes.
+ await db.exec("ALTER TABLE public.customers DISABLE TRIGGER USER; INSERT INTO public.customers(name,phone) VALUES ('Dup A','03009990000'),('Dup B','+92 300 9990000'),('Fresh','03451230000'); ALTER TABLE public.customers ENABLE TRIGGER USER;");
+ await assert.rejects(db.exec(backfill),/stopped, nothing was changed.*DUPLICATE/s);
+ await db.exec('ROLLBACK;');
+ assert.equal(await scalar(db,"SELECT phone FROM public.customers WHERE name='Fresh'"),'03451230000');
+ // Invalid customer phone also stops the run.
+ await db.exec("DELETE FROM public.customers WHERE name LIKE 'Dup %'; ALTER TABLE public.customers DISABLE TRIGGER USER; INSERT INTO public.customers(name,phone) VALUES ('Bad','not-a-phone'); ALTER TABLE public.customers ENABLE TRIGGER USER;");
+ await assert.rejects(db.exec(backfill),/INVALID/);
+ await db.exec('ROLLBACK;');
+ assert.equal(await scalar(db,"SELECT phone FROM public.customers WHERE name='Fresh'"),'03451230000');
+ await db.exec("DELETE FROM public.customers WHERE name='Bad'");
+ await db.exec(backfill);
+ assert.equal(await scalar(db,"SELECT phone FROM public.customers WHERE name='Fresh'"),'+923451230000');
+ }finally{await db.close();}
+});
